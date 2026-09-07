@@ -176,6 +176,48 @@ const SKILLS = {}; // id -> {skill, island, idx}
 ISLANDS.forEach((isl, ii) => isl.skills.forEach((sk, si) => { SKILLS[sk.id] = { sk, isl, ii, si, n: Object.keys(SKILLS).length }; }));
 const TOTAL_SKILLS = Object.keys(SKILLS).length;
 
+/* Mental-math whispers — shown before a question when the previous
+   answer took too long. Two per art, attributed to its Numen. */
+const TIPS = {
+  add: ['Round, then repair: 297 + 58 → 300 + 58, then give back 3.', 'Add left to right: tens first, then ones. 47 + 38 → 70, then 15 → 85.'],
+  sub: ['Count up, not down: 83 − 47 → from 47, add 3 to reach 50, then 33 more.', 'Round what you subtract: −29 becomes −30, then hand 1 back.'],
+  mul: ['Break a factor apart: 7 × 46 = 7×40 + 7×6.', '×5 is ×10 then half. ×9 is ×10 minus one of them.'],
+  div: ['Divide in steps: ÷6 is ÷2, then ÷3.', 'Ask how many whole TENS of the divisor fit first, then finish the rest.'],
+  negadd: ['Think temperature: −7 + 10 is warming 10° from −7, landing at 3.', 'Subtracting a negative removes a debt — that always makes you richer.'],
+  negmul: ['Count the minus signs: an even count turns positive, odd stays negative.', 'Ignore the signs, multiply the sizes, restore the sign at the very end.'],
+  orderops: ['Scan before you compute: circle every × and ÷ first; + and − wait their turn.', 'Exponents outrank everything except parentheses.'],
+  fracsimp: ['Both even? Halve both. One ends in 0 or 5 and so does the other? Try 5.', 'Digit-sum trick: if both digit-sums divide by 3, the whole fraction does.'],
+  fracadd: ['Same bottom? Add only the tops — the bottom never adds.', 'A quick common bottom is one denominator times the other; simplify after.'],
+  fracmul: ['Cancel before you multiply: cross-simplify any top with any bottom.', 'To divide, flip the second fraction and multiply. Every time, no exceptions.'],
+  decops: ['Think in money: 3.4 + 2.8 is $3.40 + $2.80.', 'For ×, drop the points, multiply whole numbers, then place the decimals back.'],
+  percent: ['Find 10% by sliding the point left; 5% is half of that, 20% is double.', 'p% of n equals n% of p: 8% of 50 = 50% of 8 = 4.'],
+  percchange: ['+20% is one multiply: ×1.2. And −20% is ×0.8.', 'Chained changes multiply: +10% then −10% is ×1.1 × 0.9 = ×0.99 — not zero.'],
+  unitrate: ['Always price ONE first: total ÷ count, then scale.', 'Compare per-one prices, never the sticker prices.'],
+  proportion: ['Cross-multiply: in a/b = c/d, the diagonals a·d and b·c are equal.', 'Ask how the known pair scaled; the unknown pair scales identically.'],
+  scale: ['Scale factor = new ÷ old, always in that order.', 'Lengths scale by s, areas by s², volumes by s³.'],
+  powers: ['Squares near round numbers: 19² = (20−1)² = 400 − 40 + 1.', 'Keep anchors in your pocket: 2¹⁰ = 1024, 15² = 225, 25² = 625.'],
+  exponlaws: ['Same base multiplied? ADD exponents. A power of a power? MULTIPLY them.', 'x⁰ = 1 — a journey of zero steps still stands somewhere.'],
+  scinot: ['Count point-slides, not zeros. Slides left = positive exponent.', 'Multiply the fronts, add the exponents; re-slide once if the front reaches 10.'],
+  onestep: ['Don’t solve — UNDO. Whatever touches x, do the opposite to both sides.', 'Check by feeding the answer back in; it should balance in your head.'],
+  twostep: ['Peel in reverse order: undo + and − first, × and ÷ last.', 'x on both sides? Subtract the smaller x-term from each side first.'],
+  distribute: ['The outside number multiplies EVERY term inside — count the terms.', '(x+a)(x+b): the middle number is a+b, the last is a·b.'],
+  area: ['Composite shape? Cut it into rectangles — or subtract the hole.', 'A triangle is half its bounding rectangle. That is the whole story of ½bh.'],
+  angles: ['Anchor to three facts: line 180°, turn 360°, triangle 180°.', 'Regular n-gon: each exterior angle is 360/n; the interior is its supplement.'],
+  pythag: ['Know the families: 3-4-5, 5-12-13, 8-15-17 — and every multiple of them.', 'The hypotenuse sits alone: c² = a² + b², never mixed in with a leg.'],
+  linear: ['Slope is rise over run: subtract the y’s over the x’s, same order.', 'In y = mx + b: b is where you start, m is how you move.'],
+  quadratic: ['Factoring x² + bx + c: find two numbers that MULTIPLY to c, ADD to b.', 'The vertex hides at x = −b/2a — symmetry gives it away.'],
+  systems: ['Stack the equations and subtract — one letter should vanish.', 'If an equation hands you y alone, substitute it in; don’t fight it.'],
+  righttri: ['SOH-CAH-TOA — pick the two sides your angle can actually see.', 'Ratios carry no units: a 3-4-5 answer holds at any size.'],
+  unitcircle: ['The 30-45-60 sines just count up: √1/2, √2/2, √3/2.', 'Cosine is the x-shadow, sine the y-shadow, of a point walking the circle.'],
+  trigsolve: ['sin² + cos² = 1 turns either ratio into the other.', 'One answer per quadrant where the sign fits — sketch the circle first.'],
+  probability: ['Probability = wanted ÷ possible. Count both before you divide.', '“And” multiplies; “or” adds (when the events can’t both happen).'],
+  counting: ['Draw a blank slot per choice, fill in the counts, multiply across.', 'Order matters → permutation. Only the group matters → divide the repeats out.'],
+  statistics: ['The mean is a balance point: total = mean × count. Use that backwards.', 'The median needs sorted data — sort first, then take the middle.'],
+  limits: ['Try substituting first — most limits simply want the value there.', 'Got 0/0? Something cancels. Factor and look for the hole.'],
+  derivative: ['Power rule chant: bring it down in front, drop the power by one.', 'A derivative is a slope — sanity-check its sign against the graph in your head.'],
+  integral: ['Integrate = reverse power rule: raise by one, divide by the new power.', 'A definite integral is area — estimate with a rectangle to sanity-check.'],
+};
+
 const LEVEL_NAMES = ['Novice of the Shore', 'Lantern Bearer', 'Tide Counter', 'Reef Apprentice', 'Chart Reader', 'Sign Walker', 'Ratio Warden', 'Peak Climber', 'Letter Hunter', 'Grove Surveyor', 'Fall Whisperer', 'Circle Dancer', 'Fog Piercer', 'Flux Adept', 'Null Challenger', 'Grand Mathfinder'];
 const lvlName = l => LEVEL_NAMES[Math.min(LEVEL_NAMES.length - 1, Math.floor((l - 1) / 3))];
 const xpNeed = l => Math.round(100 * Math.pow(l, 1.35));
@@ -559,12 +601,14 @@ function show(id) {
   $$('.screen').forEach(s => s.classList.remove('on'));
   $('#screen-' + id).classList.add('on');
   $$('.hud-nav button').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+  if (window.NumeraIsle) { id === 'home' ? NumeraIsle.resume() : NumeraIsle.stop(); }
   updateHUD();
 }
 $$('[data-nav]').forEach(b => b.addEventListener('click', () => {
   const dest = b.dataset.nav;
   if (dest === 'shop') { openShop(); return; }
   if ($('#screen-quest').classList.contains('on') && Q) { Q = null; toast('Trial abandoned. The problems will wait.'); }
+  if (dest === 'home') renderHome();
   if (dest === 'map') renderMap();
   if (dest === 'echo') renderEcho();
   if (dest === 'dex') renderDex();
@@ -699,12 +743,7 @@ let guideGo = null;
 function renderMap() {
   $('#mapGreet').textContent = S.name ? `${S.name}’s Archipelago` : 'The Archipelago';
   const restoredCount = ISLANDS.filter((_, i) => isleRestored(i)).length;
-  $('#mapHint').textContent = restoredCount === 12 ? 'Every isle shines. You are the Grand Mathfinder.' : `${restoredCount} of 12 isles restored`;
-  const guide = computeGuide();
-  $('#guideDesc').innerHTML = guide.desc;
-  $('#guideBtn').textContent = guide.label;
-  guideGo = guide.go;
-  NumeraAvatar.mount($('#avatarDock'), 110);
+  $('#mapHint').textContent = restoredCount === 12 ? 'Every isle shines. You are the Grand Mathfinder.' : `${restoredCount} of 12 isles restored · select an isle to travel`;
   const svg = $('#mapsvg');
   let out = '';
   // sea route between islands
@@ -743,25 +782,61 @@ function renderMap() {
    ISLAND DETAIL
    ================================================================ */
 let currentIsle = 0;
+function frontierIsle() {
+  for (let i = 0; i < ISLANDS.length; i++) if (isleUnlocked(i) && !isleRestored(i)) return i;
+  for (let i = ISLANDS.length - 1; i >= 0; i--) if (isleUnlocked(i)) return i;
+  return 0;
+}
 function openIsland(i) {
   currentIsle = i;
   const isl = ISLANDS[i];
   if (!S.seenIsle[isl.id]) {
     S.seenIsle[isl.id] = 1; save();
     showModal(`<div class="m-eyebrow">${isl.arc}</div><h3>${isl.name}</h3><div class="m-body"><p>${isl.lore}</p><p><em>Earn crowns in each art: Bronze, Silver, Gold. Two crowns call an art’s Numen home; every art at two crowns restores the isle.</em></p></div>`,
-      [{ label: 'Step Ashore', primary: true, cb: () => renderIsland(i) }]);
+      [{ label: 'Step Ashore', primary: true }]);
   }
-  renderIsland(i);
-  show('island');
+  renderHome();
+  show('home');
 }
-function renderIsland(i) {
+function renderHome() {
+  const i = currentIsle, isl = ISLANDS[i];
+  const guide = computeGuide();
+  $('#guideDesc').innerHTML = guide.desc;
+  $('#guideBtn').textContent = guide.label;
+  guideGo = guide.go;
+  const crowns = isl.skills.reduce((s, sk) => s + skillState(sk.id).crowns, 0);
+  $('#ioArc').textContent = isl.arc;
+  $('#ioName').textContent = isl.name;
+  $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
+  const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
+  const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
+  $('#isle3dWrap').hidden = !ok;
+  $('#isleHint').hidden = !ok;
+  $('#skillList').hidden = !!ok;
+  if (!ok) renderSkillList(i);
+}
+function openSkill(id) {
+  const info = SKILLS[id], sk = info.sk, st = skillState(id);
+  const caught = S.numen[id] || 0;
+  const acc = st.attempts ? `${Math.round(st.correct / st.attempts * 100)}% lifetime accuracy` : 'untried';
+  const tiers = [1, 2, 3].map(t => {
+    const open = t <= st.crowns + 1, done = t <= st.crowns;
+    return `<button class="btn-ghost ${!done && t === st.crowns + 1 ? 'rec' : ''}" data-qt="${t}" ${open ? '' : 'disabled'}>${done ? '✓ ' : '▸ '}${TIER_NAMES[t]}</button>`;
+  }).join('');
+  showModal(`
+    <div class="m-eyebrow">${info.isl.name}</div>
+    <h3>${sk.name} <span style="font-size:17px;color:var(--gold);letter-spacing:.15em">${'♛'.repeat(st.crowns)}</span></h3>
+    <div class="m-body"><p>${sk.desc} · ${acc}</p>
+    <p style="color:${caught ? 'var(--aqua)' : 'var(--violet)'}">${caught ? (caught === 2 ? '✦ ' + sk.numen[0] + ' shines here in starform.' : '✦ ' + sk.numen[0] + ' walks with you.') : '✧ A Numen stirs here — reach two crowns to call it home.'}</p>
+    <div class="m-tiers">${tiers}</div></div>`,
+    [{ label: 'Not yet' }]);
+  $$('#modalCard [data-qt]').forEach(b => b.addEventListener('click', () => {
+    $('#modal').hidden = true;
+    startQuest(id, +b.dataset.qt);
+  }));
+}
+function renderSkillList(i) {
   const isl = ISLANDS[i];
-  const restored = isleRestored(i);
-  $('#islandHead').innerHTML = `
-    <div class="arc">${isl.arc}</div>
-    <h2>${isl.name}</h2>
-    <p class="lore">${restored ? isl.restored : isl.lore}</p>
-    ${restored ? '<span class="restored-tag">✦ Restored</span>' : ''}`;
   $('#skillList').innerHTML = isl.skills.map(sk => {
     const st = skillState(sk.id);
     const caught = S.numen[sk.id] || 0;
@@ -824,6 +899,15 @@ function nextQuestion() {
   $('#qMetaSkill').textContent = `${info.isl.name} · ${info.sk.name}`;
   $('#qMetaTier').textContent = Q.mode === 'echo' ? 'Echo Tide' : TIER_NAMES[it.tier];
   $('#qDots').innerHTML = Q.items.map((_, j) => `<i class="${j === Q.i ? 'now' : j < Q.i ? (Q.items[j].good ? 'good' : 'bad') : ''}"></i>`).join('');
+  const tipBox = $('#qTipBox');
+  if (Q.showTip && TIPS[it.skillId]) {
+    const arr = TIPS[it.skillId];
+    Q.tipN = Q.tipN || 0;
+    tipBox.innerHTML = `<b>✧ ${SKILLS[it.skillId].sk.numen[0]} whispers a trick:</b> ${arr[Q.tipN % arr.length]}`;
+    tipBox.hidden = false;
+    Q.tipN++;
+    Q.showTip = false;
+  } else tipBox.hidden = true;
   $('#qPrompt').innerHTML = Q.cur.q;
   $('#qFeedback').hidden = true;
   $('#qHintBox').hidden = true;
@@ -869,6 +953,8 @@ function submitAnswer(mcIdx) {
   const st = skillState(Q.curMeta.skillId);
   st.attempts++;
   const secs = (Date.now() - Q.t0) / 1000;
+  // a long think earns a mental-math whisper before the NEXT question
+  if (secs > 20 + 8 * (Q.curMeta.tier - 1)) Q.showTip = true;
   const fb = $('#qFeedback');
   if (good) {
     st.correct++; S.stats.solved++;
@@ -925,7 +1011,7 @@ $('#qHint').addEventListener('click', () => {
   $('#qHint').textContent = `✧ Hint (${S.items.hints})`;
   save();
 });
-$('#qQuit').addEventListener('click', () => { Q = null; renderMap(); show('map'); toast('Trial abandoned. The problems will wait.'); });
+$('#qQuit').addEventListener('click', () => { Q = null; renderHome(); show('home'); toast('Trial abandoned. The problems will wait.'); });
 
 function endSession() {
   const q = Q; Q = null;
@@ -986,7 +1072,7 @@ function endSession() {
   showModal(html, [{
     label: 'Continue', primary: true, cb: () => {
       const queue = newNumen.slice();
-      const afterNumen = () => checkRestores(() => { checkMedals(); renderIsland(currentIsle); if (q.mode === 'echo') { renderEcho(); show('echo'); } else show('island'); updateHUD(); });
+      const afterNumen = () => checkRestores(() => { checkMedals(); if (q.mode === 'echo') { renderEcho(); show('echo'); } else { if (isleRestored(currentIsle)) currentIsle = frontierIsle(); renderHome(); show('home'); } updateHUD(); });
       const popNumen = () => {
         if (!queue.length) { afterNumen(); return; }
         const [id, star] = queue.shift();
@@ -1139,19 +1225,21 @@ addEventListener('resize', drawStars);
 drawStars();
 
 $('#guideBtn').addEventListener('click', () => { if (guideGo) guideGo(); });
+$('#setSail').addEventListener('click', () => { renderMap(); show('map'); });
 
 $('#beginBtn').addEventListener('click', () => {
   S.name = $('#nameInput').value.trim() || 'Wanderer';
   S.introSeen = true; save();
   $('#hud').hidden = false;
-  renderMap(); show('map');
+  openIsland(frontierIsle());
   toast(`Welcome, <b>${S.name}</b>. Follow <b>Your Path</b> — it always knows the next step.`);
 });
 $('#nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#beginBtn').click(); });
 
 if (S.introSeen) {
   $('#hud').hidden = false;
-  renderMap(); show('map');
+  currentIsle = frontierIsle();
+  renderHome(); show('home');
   const due = dueSkills().length;
   if (due) toast(`≈ The <b>Echo Tide</b> carries ${due} echo${due > 1 ? 'es' : ''} today — ride it to keep them bright.`);
 } else {

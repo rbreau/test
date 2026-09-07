@@ -19,7 +19,8 @@
       <span class="stat streak" title="Daily streak"><span class="glyph">✹</span> <b id="streakEl">0</b></span>
     </div>
     <nav class="hud-nav">
-      <button data-nav="map">Map</button>
+      <button data-nav="home">My Isle</button>
+      <button data-nav="map">World</button>
       <button data-nav="echo">Echo Tide <em id="dueBadge" hidden>0</em></button>
       <button data-nav="dex">Numendex</button>
       <button data-nav="medals">Medals</button>
@@ -45,18 +46,32 @@
       <p class="title-sub" style="letter-spacing:.1em">Progress is kept on this device</p>
     </section>
 
-    <section id="screen-map" class="screen">
-      <div class="maphead">
-        <h2 id="mapGreet">The Archipelago</h2>
-        <p id="mapHint">Select an isle to begin restoring it.</p>
-      </div>
+    <section id="screen-home" class="screen">
       <div id="guideCard">
-        <div id="avatarDock" aria-hidden="true"></div>
         <div id="guideText">
           <div class="guide-eyebrow">✦ Your Path</div>
           <div id="guideDesc"></div>
         </div>
         <button class="btn-primary" id="guideBtn">Begin ▸</button>
+      </div>
+      <div id="isle3dWrap">
+        <div id="isleOverlay">
+          <div class="io-arc" id="ioArc"></div>
+          <h2 id="ioName"></h2>
+          <div class="io-crowns" id="ioCrowns"></div>
+        </div>
+        <button class="btn-ghost" id="setSail">🧭 World Map</button>
+        <div id="isle3d" aria-hidden="true"></div>
+        <div id="isleLabels" aria-hidden="true"></div>
+      </div>
+      <p id="isleHint">Your Mathfinder wanders the isle. Select a floating sigil — or a name — to face its trials.</p>
+      <div id="skillList" hidden></div>
+    </section>
+
+    <section id="screen-map" class="screen">
+      <div class="maphead">
+        <h2 id="mapGreet">The Archipelago</h2>
+        <p id="mapHint">Select an isle to travel there.</p>
       </div>
       <div id="mapwrap"><svg id="mapsvg" viewBox="0 0 1000 640" role="img" aria-label="Map of the Numera archipelago"></svg></div>
       <div class="map-legend">
@@ -64,12 +79,6 @@
         <span><i class="dotk" style="background:var(--gold)"></i> Awakened</span>
         <span><i class="dotk" style="background:#3a446f"></i> Bound by the Null</span>
       </div>
-    </section>
-
-    <section id="screen-island" class="screen">
-      <button class="back" data-nav="map">◂ Back to the Archipelago</button>
-      <div id="islandHead"></div>
-      <div id="skillList"></div>
     </section>
 
     <section id="screen-quest" class="screen">
@@ -80,6 +89,7 @@
       </div>
       <div id="qMeta"><span id="qMetaSkill"></span><span id="qMetaTier"></span></div>
       <div id="qCard">
+        <div id="qTipBox" hidden></div>
         <div id="qPrompt"></div>
         <div id="qAnswerZone"></div>
         <div id="qHintBox" class="hinttext" hidden></div>
@@ -137,4 +147,5 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="avatar.js"></script>
+<script src="island3d.js"></script>
 <script src="game.js"></script>

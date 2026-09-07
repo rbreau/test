@@ -10,22 +10,10 @@ window.NumeraAvatar = (function () {
   let renderer = null, scene, camera, rig = null, running = false;
   let celebrateT = 0;
 
-  function build() {
-    if (renderer || !window.THREE) return;
-    try {
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    } catch (e) { renderer = null; return; }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
-    camera.position.set(0, 1.2, 3.6);
-    camera.lookAt(0, 0.95, 0);
-
-    scene.add(new THREE.AmbientLight(0x8b9ff2, 0.65));
-    const key = new THREE.DirectionalLight(0xf2e6c8, 0.55);
-    key.position.set(2, 4, 3);
-    scene.add(key);
-
+  /* Shared character factory — used by the portrait scene here and by
+     the walking island scene in island3d.js. Returns the rig. */
+  function buildCharacter(opts) {
+    opts = opts || {};
     const robeMat = new THREE.MeshStandardMaterial({ color: 0x2a3a7a, flatShading: true, roughness: 0.85 });
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xf2c14e, flatShading: true, roughness: 0.4, metalness: 0.35, emissive: 0x6b4f0e });
     const glowMat = new THREE.MeshBasicMaterial({ color: 0xffe9a8 });
@@ -63,18 +51,45 @@ window.NumeraAvatar = (function () {
     lantern.position.set(0.68, 0.82, 0.22);
     g.add(lantern);
 
-    const starGeo = new THREE.BufferGeometry();
-    const pos = new Float32Array(42 * 3);
-    for (let i = 0; i < 42; i++) {
-      const a = Math.random() * Math.PI * 2, r = 0.9 + Math.random() * 0.9, y = 0.2 + Math.random() * 1.7;
-      pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * r;
+    let stars = null;
+    if (opts.stars !== false) {
+      const starGeo = new THREE.BufferGeometry();
+      const pos = new Float32Array(42 * 3);
+      for (let i = 0; i < 42; i++) {
+        const a = Math.random() * Math.PI * 2, r = 0.9 + Math.random() * 0.9, y = 0.2 + Math.random() * 1.7;
+        pos[i * 3] = Math.cos(a) * r; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * r;
+      }
+      starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xede6d3, size: 0.035, transparent: true, opacity: 0.85 }));
+      g.add(stars);
     }
-    starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xede6d3, size: 0.035, transparent: true, opacity: 0.85 }));
-    g.add(stars);
+    if (opts.lightIntensity !== undefined) light.intensity = opts.lightIntensity;
+    return { g, lantern, light, stars, eyes };
+  }
 
-    scene.add(g);
-    rig = { g, lantern, light, stars, eyes, baseY: 0 };
+  /* Shared idle animation for a character rig (blink, lantern sway). */
+  function idleRig(r, s) {
+    r.lantern.rotation.z = Math.sin(s * 1.8) * 0.14;
+    r.eyes.scale.y = (s % 3.7) > 3.55 ? 0.15 : 1;
+    if (r.stars) r.stars.rotation.y = s * 0.12;
+  }
+
+  function build() {
+    if (renderer || !window.THREE) return;
+    try {
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    } catch (e) { renderer = null; return; }
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
+    camera.position.set(0, 1.2, 3.6);
+    camera.lookAt(0, 0.95, 0);
+    scene.add(new THREE.AmbientLight(0x8b9ff2, 0.65));
+    const key = new THREE.DirectionalLight(0xf2e6c8, 0.55);
+    key.position.set(2, 4, 3);
+    scene.add(key);
+    rig = buildCharacter();
+    scene.add(rig.g);
   }
 
   function frame(t) {
@@ -165,5 +180,5 @@ window.NumeraAvatar = (function () {
     });
   });
 
-  return { mount, celebrate, levelUp, get ready() { build(); return !!renderer; } };
+  return { mount, celebrate, levelUp, buildCharacter, idleRig, get ready() { build(); return !!renderer; } };
 })();

@@ -341,8 +341,48 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 #guideDesc .gd-sub{display:block;color:var(--dim);font-size:13px;margin-top:2px}
 
 /* ---------------- recommended tier ---------------- */
-.tierbtns button.rec{border-color:var(--gold);animation:recpulse 2.2s ease-in-out infinite}
+.tierbtns button.rec,.m-tiers button.rec{border-color:var(--gold);animation:recpulse 2.2s ease-in-out infinite}
 @keyframes recpulse{0%,100%{box-shadow:0 0 4px #f2c14e22}50%{box-shadow:0 0 16px #f2c14e55}}
+.m-tiers{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.m-tiers button{text-align:left;font-size:15px}
+.m-tiers button:disabled{opacity:.35;cursor:default}
+
+/* ---------------- the living isle (home view) ---------------- */
+#isle3dWrap{
+  position:relative;border:1px solid var(--ink-line);border-radius:16px;overflow:hidden;
+  background:
+    radial-gradient(900px 380px at 50% 115%,#12377144,transparent),
+    linear-gradient(180deg,#0b1130,#0c1636);
+}
+#isle3dWrap[hidden]{display:none}
+#isle3d canvas{display:block;width:100%}
+#isleOverlay{position:absolute;top:16px;left:20px;z-index:3;pointer-events:none}
+.io-arc{color:var(--gold);font-size:11px;letter-spacing:.3em;text-transform:uppercase}
+#ioName{font-size:26px;letter-spacing:.05em;text-shadow:0 2px 12px #05081c}
+#ioCrowns{color:var(--dim);font-size:13px;font-family:var(--font-mono)}
+#setSail{position:absolute;top:16px;right:16px;z-index:3;background:#121936cc}
+#isleLabels{position:absolute;inset:0;z-index:2;pointer-events:none}
+.isleLabel{
+  position:absolute;transform:translate(-50%,-100%);pointer-events:auto;
+  background:#0a0e23d9;border:1px solid var(--ink-line);border-radius:99px;
+  color:var(--parchment);font-family:var(--font-body);font-size:12.5px;
+  padding:4px 12px;white-space:nowrap;transition:border-color .15s;
+}
+.isleLabel:hover,.isleLabel:focus-visible{border-color:var(--gold);outline:none}
+.isleLabel i{font-style:normal;color:var(--gold);margin-left:6px;letter-spacing:.1em}
+#isleHint{color:var(--dim);font-size:13px;text-align:center;margin:10px 0 0}
+#isleHint[hidden]{display:none}
+#skillList[hidden]{display:none}
+
+/* ---------------- mental-math whisper ---------------- */
+#qTipBox{
+  margin-bottom:20px;padding:12px 16px;border-radius:10px;font-size:14.5px;
+  font-family:var(--font-body);color:var(--parchment);
+  background:#8b7cf614;border:1px solid #8b7cf655;
+  animation:rise .4s ease;
+}
+#qTipBox[hidden]{display:none}
+#qTipBox b{color:var(--violet);display:block;margin-bottom:3px;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase}
 
 /* ---------------- answer juice ---------------- */
 #qCard{position:relative;overflow:hidden}

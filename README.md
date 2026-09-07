@@ -52,6 +52,10 @@ Every game mechanic maps to an evidence-backed learning principle:
 - **Mastery learning** — the next island unlocks only when every art on the previous
   isle holds at least one crown; a crown requires ≈85% on a trial. You can't outrun
   gaps in your foundation.
+- **Adaptive mental-math tips** — the game times every answer; when the previous one
+  ran long, the next question opens with a topic-specific "whisper" from that art's
+  Numen (a rounding trick, a sign rule, a factoring chant) — help arrives from
+  observed struggle, never mid-problem.
 - **Immediate corrective feedback** — a wrong answer shows the correct result *and* a
   one-line worked explanation, and the missed problem silently re-queues at the end of
   the same session (error-driven relearning).
@@ -83,6 +87,8 @@ Every game mechanic maps to an evidence-backed learning principle:
 - `index.html` — page skeleton
 - `style.css` — the "starlight cartography" theme
 - `avatar.js` — the 3D Mathfinder avatar (Three.js) and the level-up ceremony
+- `island3d.js` — the living-isle home view: your avatar wandering the current island,
+  with clickable sigil-crystals for each art (falls back to a list without WebGL)
 - `game.js` — world data, 37 problem generators, learning engine, UI
 
 ## Ideas for future expansions
