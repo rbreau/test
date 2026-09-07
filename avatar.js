@@ -37,26 +37,76 @@ window.NumeraAvatar = (function () {
     const g = new THREE.Group();
     const model = THREE.SkeletonUtils ? THREE.SkeletonUtils.clone(gltf.scene) : gltf.scene.clone(true);
     const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
-    const s = 1.8 / (size.y || 1); model.scale.setScalar(s);
-    model.position.y = -box.min.y * s;
-    model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = false; } });
+    const s = 1.8 / (size.y || 1); model.scale.multiplyScalar(s);
+    model.position.set(-(box.min.x + size.x / 2) * s, -box.min.y * s, -(box.min.z + size.z / 2) * s);
+    // unified toon look, palette texture kept
+    const ramp = window.NumeraAssets ? NumeraAssets.toonRamp() : null;
+    model.traverse(o => {
+      if (!o.isMesh && !o.isSkinnedMesh) return;
+      o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false;
+      if (ramp) { const m = o.material; const t = new THREE.MeshToonMaterial({ color: m.color ? m.color.clone() : new THREE.Color(0xffffff), map: m.map || null, gradientMap: ramp, skinning: !!o.isSkinnedMesh }); if (m.map) { m.map.encoding = THREE.sRGBEncoding; m.map.magFilter = THREE.NearestFilter; m.map.minFilter = THREE.NearestFilter; } o.material = t; }
+      else if (o.material && o.isSkinnedMesh) o.material.skinning = true;
+    });
     g.add(model);
+    // ---- animation: clips when the file has them, otherwise a procedural walk/idle on the real bones
     const mixer = new THREE.AnimationMixer(model);
-    const find = re => gltf.animations.find(c => re.test(c.name));
-    const idleC = find(/idle|stand|breath/i) || gltf.animations[0], walkC = find(/walk|run|jog/i), celC = find(/jump|dance|cheer|wave|celebr|victory/i);
+    const find = re => (gltf.animations || []).find(c => re.test(c.name));
+    const idleC = find(/idle|stand|breath/i) || (gltf.animations || [])[0], walkC = find(/walk|run|jog/i), celC = find(/jump|dance|cheer|wave|celebr|victory/i);
     const idle = idleC ? mixer.clipAction(idleC) : null, walk = walkC ? mixer.clipAction(walkC) : null, cel = celC ? mixer.clipAction(celC) : null;
     if (idle) idle.play(); if (walk) { walk.play(); walk.setEffectiveWeight(0); }
-    const lantern = new THREE.Group(); lantern.position.set(0.35, 0.95, 0.2);
+    const bones = {}; model.traverse(o => { if (o.isBone) bones[o.name] = o; });
+    const B = n => bones[n] || null;
+    const rig = { pelvis: B('pelvis'), spine: B('spine_02') || B('spine_01'), chest: B('spine_03'), neck: B('neck_01'), head: B('head'),
+      uaL: B('upperarm_l'), uaR: B('upperarm_r'), laL: B('lowerarm_l'), laR: B('lowerarm_r'), thL: B('thigh_l'), thR: B('thigh_r'), caL: B('calf_l'), caR: B('calf_r'), ftL: B('foot_l'), ftR: B('foot_r'), handL: B('hand_l'), handR: B('hand_r') };
+    const procedural = !idleC && !!(rig.thL && rig.uaL);
+    const rest = {}; Object.keys(rig).forEach(k => { if (rig[k]) rest[k] = rig[k].quaternion.clone(); });
+    const SIDE = new THREE.Vector3(1, 0, 0), UP = new THREE.Vector3(0, 1, 0), FWD = new THREE.Vector3(0, 0, 1);
+    const tmpQ = new THREE.Quaternion(), tmpQ2 = new THREE.Quaternion(), tmpV = new THREE.Vector3();
+    // rotate a bone about an axis given in the CHARACTER's frame (so facing direction doesn't matter), on top of its rest pose
+    const gInv = new THREE.Quaternion();
+    function localAxis(b, axis) { b.parent.getWorldQuaternion(tmpQ2); tmpQ2.premultiply(gInv).invert(); return tmpV.copy(axis).applyQuaternion(tmpQ2).normalize(); }
+    function turn(k, axis, angle) {
+      const b = rig[k]; if (!b) return;
+      b.quaternion.copy(tmpQ.setFromAxisAngle(localAxis(b, axis), angle)).multiply(rest[k]);
+    }
+    function swing(k, axis, angle) { const b = rig[k]; if (!b) return; b.quaternion.premultiply(tmpQ.setFromAxisAngle(localAxis(b, axis), angle)); }
+    const lantern = new THREE.Group();
+    mesh(new THREE.OctahedronGeometry(0.11), new THREE.MeshBasicMaterial({ color: C.gold, wireframe: true }), 0, 0, 0, lantern);
+    mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshBasicMaterial({ color: C.glow }), 0, 0, 0, lantern);
+    mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.16, 6), mat(C.gold, { metalness: 0.6, roughness: 0.3 }), 0, 0.15, 0, lantern);
     const light = new THREE.PointLight(C.gold, opts.lightIntensity === undefined ? 0.9 : opts.lightIntensity, 4); lantern.add(light);
-    mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: C.glow }), 0, 0, 0, lantern);
-    g.add(lantern);
-    const r = { g, lantern, light, stars: null, arms: null, eyes: null, isGltf: true, celebrating: 0 };
+    lantern.position.set(0.35, 0.9, 0.15); g.add(lantern);
+    const r = { g, lantern, light, stars: null, arms: null, eyes: null, isGltf: true, phase: 0 };
+    let celT = -1;
     r.animate = function (s, speed, dt) {
-      mixer.update(dt || 0.016);
-      if (idle) idle.setEffectiveWeight(1 - (speed || 0)); if (walk) walk.setEffectiveWeight(speed || 0);
-      light.intensity = (opts.lightIntensity === undefined ? 0.9 : opts.lightIntensity) * (1 + Math.sin(s * 3.2) * 0.1);
+      speed = speed || 0; dt = dt || 0.016;
+      if (!procedural) { mixer.update(dt); if (idle) idle.setEffectiveWeight(1 - speed); if (walk) walk.setEffectiveWeight(speed); }
+      else {
+        r.phase += (1.0 + speed * 5.6) * dt;
+        const p = r.phase, w = Math.sin(p * 6.2), w2 = Math.sin(p * 6.2 + Math.PI), idleW = 1 - speed;
+        const breathe = Math.sin(s * 1.6) * 0.02, look = env(s % 9, 2.2, 4.6) * idleW, raise = env(s % 13, 6, 8.2) * idleW;
+        let celeb = 0; if (celT >= 0) { const q = (s - celT) / 1.6; if (q >= 1) celT = -1; else celeb = Math.sin(q * Math.PI); }
+        model.updateMatrixWorld(true); g.getWorldQuaternion(gInv).invert();
+        // legs: thighs swing about the side axis, calves bend back on the trailing leg, feet flex
+        turn('thL', SIDE, -w * 0.55 * speed); turn('thR', SIDE, -w2 * 0.55 * speed);
+        turn('caL', SIDE, Math.max(0, -w2) * 0.9 * speed + 0.05); turn('caR', SIDE, Math.max(0, -w) * 0.9 * speed + 0.05);
+        turn('ftL', SIDE, -Math.max(0, w) * 0.3 * speed); turn('ftR', SIDE, -Math.max(0, w2) * 0.3 * speed);
+        // arms: relaxed A-pose down from the rest, swinging opposite the legs; left arm raises the lantern
+        turn('uaL', FWD, -1.25); turn('uaR', FWD, 1.25); // T-pose → arms hanging at the sides
+        swing('uaL', SIDE, -(w2 * 0.55 * speed) - raise * 1.3 - celeb * 2.2);
+        swing('uaR', SIDE, -(w * 0.55 * speed) - celeb * 2.2);
+        turn('laL', SIDE, -0.35 - Math.max(0, -w2) * 0.4 * speed - raise * 0.4); turn('laR', SIDE, -0.35 - Math.max(0, -w) * 0.4 * speed);
+        // torso: sway, bob, breathe; head: look around when idle
+        turn('pelvis', UP, w * 0.07 * speed); turn('spine', UP, -w * 0.06 * speed); turn('chest', SIDE, breathe - 0.03 * speed);
+        turn('neck', UP, Math.sin(s * 2.4) * 0.35 * look); turn('head', UP, Math.sin(s * 0.7) * 0.08 * idleW + Math.sin(s * 2.4) * 0.25 * look);
+        if (rig.pelvis) rig.pelvis.position.y = (rest.pelvisY === undefined ? (rest.pelvisY = rig.pelvis.position.y) : rest.pelvisY) + (Math.abs(Math.sin(p * 6.2)) * 3.5 * speed + celeb * 25) * 1; // cm-space bounce
+        light.intensity = (opts.lightIntensity === undefined ? 0.9 : opts.lightIntensity) * (1 + Math.sin(s * 3.2) * 0.1 + raise * 0.6);
+      }
+      // lantern rides in the left hand
+      if (rig.handL) { model.updateMatrixWorld(true); rig.handL.getWorldPosition(tmpV); g.worldToLocal(tmpV); lantern.position.copy(tmpV).add(new THREE.Vector3(0, -0.1, 0.05)); }
+      lantern.rotation.z = Math.sin(s * 2.1) * 0.12;
     };
-    r.celebrate = function () { if (cel) { cel.reset().setLoop(THREE.LoopOnce, 1).play(); if (idle) idle.crossFadeTo(cel, 0.2, false); setTimeout(() => { if (idle) idle.reset().play(); }, (celC.duration || 2) * 1000); } };
+    r.celebrate = function () { if (cel) { cel.reset().setLoop(THREE.LoopOnce, 1).play(); if (idle) idle.crossFadeTo(cel, 0.2, false); setTimeout(() => { if (idle) idle.reset().play(); }, (celC.duration || 2) * 1000); } else celT = performance.now() / 1000; };
     return r;
   }
 
@@ -239,7 +289,8 @@ window.NumeraAvatar = (function () {
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('lfBtn').addEventListener('click', () => { document.getElementById('levelfx').hidden = true; if (lfDone) { const f = lfDone; lfDone = null; f(); } });
   });
-  if (window.NUMERA_ASSETS) loadModel(window.NUMERA_ASSETS + 'mathfinder.glb');
+  if (window.NUMERA_CHARACTER_DATA) loadModel(window.NUMERA_CHARACTER_DATA);
+  else if (window.NUMERA_ASSETS) loadModel(window.NUMERA_ASSETS + 'mathfinder.glb');
 
   return { mount, celebrate, levelUp, buildCharacter, loadModel, onModel, get ready() { build(); return !!renderer; }, get hasModel() { return !!gltf; } };
 })();

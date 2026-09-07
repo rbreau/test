@@ -11,7 +11,14 @@ html = html.replace(/<script src="([^"]+)"><\/script>/g, (m, src) => {
   if (/^https?:/.test(src)) return m;
   return '<script>\n' + fs.readFileSync(path.join(root, src), 'utf8') + '\n</script>';
 });
-html = html.replace("window.NUMERA_ASSETS = 'assets/';", 'window.NUMERA_ASSETS = null;');
+// single file: no asset folder, but embed the character model as a data URL when it exists and is small enough
+const glbPath = path.join(root, 'assets', 'mathfinder.glb');
+let charTag = 'window.NUMERA_ASSETS = null;';
+if (fs.existsSync(glbPath) && fs.statSync(glbPath).size < 11 * 1024 * 1024) {
+  charTag += " window.NUMERA_CHARACTER_DATA = 'data:model/gltf-binary;base64," + fs.readFileSync(glbPath).toString('base64') + "';";
+  console.log('embedded character', (fs.statSync(glbPath).size / 1024 / 1024).toFixed(1) + ' MB');
+}
+html = html.replace("window.NUMERA_ASSETS = 'assets/';", () => charTag);
 // the artifact host supplies its own charset/viewport metas
 html = html.replace(/^<meta charset="utf-8">\n<meta name="viewport"[^>]*>\n/, '');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

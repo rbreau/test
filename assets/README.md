@@ -1,5 +1,13 @@
 # Assets — drop real models here
 
+**Current character**: `mathfinder.glb` is assembled from the Synty **SIDEKICK Starter** pack
+(preset Starter_02: sci-fi civilian outfit, backpack, blue mohawk) — 31 skinned parts re-bound
+to one shared 88-bone skeleton, palette texture applied, exported to glTF. The game animates the
+real bones procedurally (walk cycle, idle breathing, look-around, lantern raise, celebrate) because
+the pack ships no clips. Rebuild with `tools/build-character.md` notes. Synty assets are licensed
+to the purchaser, not for redistribution — keep this repository private if the model stays in it.
+
+
 The game reads **`manifest.json`** in this folder (only when served over HTTP — GitHub Pages,
 or `python3 -m http.server` locally). Every model it names is preloaded, grounded, scaled to
 a per-kind height, re-shaded with the toon ramp, and placed by the island composer.
