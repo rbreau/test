@@ -82,15 +82,50 @@ Every game mechanic maps to an evidence-backed learning principle:
 - **22 medals**, 16 level titles ("Novice of the Shore" → "Grand Mathfinder"),
   island-restoration story beats, level-up ceremonies, and an ending.
 
+## Graphics pipeline
+
+The home view is a real-time Three.js scene (r128, vendored under `vendor/`):
+
+- **Rendering**: shadow maps (PCF soft), ACES filmic tone mapping, sRGB output via a
+  final color-grade pass (vignette, saturation, tint), Unreal bloom that adapts to the
+  time of day, screen-space ambient occlusion on desktop, MSAA on WebGL2 (FXAA
+  fallback), distance fog.
+- **World**: gradient sky dome, drifting clouds, an animated water shader (ripples,
+  sun glints, shore foam), wind-swept instanced grass (2,200 blades on desktop) and
+  flowers, pollen by day and blinking fireflies by night, PoGo-style roads, translucent
+  town blocks, far isles on the horizon.
+- **Day/night**: driven by your real clock — sun position, light color, sky, water,
+  exposure, bloom, stars and landmark lights all shift through dawn, day, dusk and
+  night. Append `?hour=21.5` to the URL to preview any time.
+- **Twelve biomes**: each island has its own landmark — Ember Shore's lighthouse, the
+  obsidian monoliths of the Hollow of Signs, Fraction Cove's tide pools, the Glass
+  Delta's shards, Ratio Reef's 3:5 coral, the doubling stairs of Exponent Peaks, the
+  crossed stones of Algebra Vale, Geometry Grove's polygon pillars, Function Falls,
+  the ring temple of Trig, the dice of Chance Mire, and the glowing Calculus Caldera.
+- **Character**: an articulated procedural Mathfinder (lathe-profiled jacket, curved
+  hair strands, backpack, lantern) with a walk cycle and idle emotes — or, when
+  `assets/mathfinder.glb` exists, a real rigged glTF character with Mixamo-style
+  idle/walk/celebrate clips swapped in live (see `assets/README.md`).
+
 ## Files
 
 - `index.html` — page skeleton
 - `style.css` — the "starlight cartography" theme
-- `avatar.js` — the articulated 3D Mathfinder (Three.js): smooth-shaded humanoid with a
-  walk cycle, plus the level-up ceremony
-- `island3d.js` — the living-isle home view: your avatar wandering the current island,
-  with clickable sigil-crystals for each art (falls back to a list without WebGL)
+- `avatar.js` — the Mathfinder character (procedural or glTF), portrait scenes, level-up ceremony
+- `island3d.js` — the living-isle home view and its rendering pipeline
 - `game.js` — world data, 37 problem generators, learning engine, UI
+- `vendor/` — Three.js r128 and its post-processing / glTF add-ons (MIT)
+- `build.js` — `node build.js` bundles everything into one file at `dist/numera.html`
+- `.github/workflows/pages.yml` — deploys the site to GitHub Pages
+
+## Deploying
+
+**GitHub Pages** (recommended): merge to `main`, then in the repo go to *Settings →
+Pages* and set *Source* to **GitHub Actions**. The workflow publishes the site on every
+push. This also unlocks the optional glTF character, which is only fetched over HTTP.
+
+**Single file**: run `node build.js` and open or share `dist/numera.html` — it contains
+the whole game, including the 3D engine, with no external requests.
 
 ## Ideas for future expansions
 
