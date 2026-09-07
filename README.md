@@ -123,6 +123,8 @@ the JSON the Unity client reads from `game.js`.
 - `island3d.js` — the living-isle home view and its rendering pipeline
 - `game.js` — world data, 37 problem generators, learning engine, UI
 - `vendor/` — Three.js r128 and its post-processing / glTF add-ons (MIT)
+- `assets.js` — the glTF asset pipeline: reads `assets/manifest.json`, normalizes and toon-shades kit models, hot-swaps them in
+- `assets/` — drop real models here (see `assets/README.md`); `docs/STYLE_BIBLE.md` is the art direction
 - `build.js` — `node build.js` bundles everything into one file at `dist/numera.html`
 - `.github/workflows/pages.yml` — deploys the site to GitHub Pages
 

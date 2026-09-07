@@ -11,7 +11,7 @@
 window.NumeraAvatar = (function () {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let renderer = null, scene, camera, rig = null, running = false, celebrateT = 0;
-  let gltf = null; const modelListeners = [];
+  let gltf = null, loading = false; const modelListeners = [];
 
   const C = {
     skin: 0xf3cfae, hair: 0x8a4a22, hairDark: 0x6d3717, jacket: 0xf6f3ee, jacketShade: 0xe4dfd6,
@@ -26,10 +26,11 @@ window.NumeraAvatar = (function () {
 
   /* ---------- glTF character ---------- */
   function loadModel(url) {
-    if (!window.THREE || !THREE.GLTFLoader || gltf) return;
+    if (!window.THREE || !THREE.GLTFLoader || gltf || loading) return;
+    loading = true;
     new THREE.GLTFLoader().load(url, g => {
-      gltf = g; modelListeners.forEach(cb => { try { cb(); } catch (e) { } });
-    }, undefined, () => { /* no model shipped — procedural stays */ });
+      gltf = g; loading = false; modelListeners.forEach(cb => { try { cb(); } catch (e) { } });
+    }, undefined, () => { loading = false; /* no model shipped — procedural stays */ });
   }
   function onModel(cb) { modelListeners.push(cb); if (gltf) cb(); }
   function buildGltfRig(opts) {

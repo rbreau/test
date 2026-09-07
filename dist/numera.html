@@ -7927,7 +7927,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 window.NumeraAvatar = (function () {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let renderer = null, scene, camera, rig = null, running = false, celebrateT = 0;
-  let gltf = null; const modelListeners = [];
+  let gltf = null, loading = false; const modelListeners = [];
 
   const C = {
     skin: 0xf3cfae, hair: 0x8a4a22, hairDark: 0x6d3717, jacket: 0xf6f3ee, jacketShade: 0xe4dfd6,
@@ -7942,10 +7942,11 @@ window.NumeraAvatar = (function () {
 
   /* ---------- glTF character ---------- */
   function loadModel(url) {
-    if (!window.THREE || !THREE.GLTFLoader || gltf) return;
+    if (!window.THREE || !THREE.GLTFLoader || gltf || loading) return;
+    loading = true;
     new THREE.GLTFLoader().load(url, g => {
-      gltf = g; modelListeners.forEach(cb => { try { cb(); } catch (e) { } });
-    }, undefined, () => { /* no model shipped — procedural stays */ });
+      gltf = g; loading = false; modelListeners.forEach(cb => { try { cb(); } catch (e) { } });
+    }, undefined, () => { loading = false; /* no model shipped — procedural stays */ });
   }
   function onModel(cb) { modelListeners.push(cb); if (gltf) cb(); }
   function buildGltfRig(opts) {
@@ -8163,6 +8164,105 @@ window.NumeraAvatar = (function () {
 <script>
 'use strict';
 /* ================================================================
+   NUMERA — asset pipeline
+   Reads <NUMERA_ASSETS>/manifest.json, preloads every glTF it names,
+   normalizes each model (feet on the ground, height to a per-kind
+   target), re-shades it with a stepped toon ramp so mixed packs read
+   as one world, and hands out clones on demand. Anything missing
+   falls back to the procedural placeholders in island3d.js.
+   ================================================================ */
+window.NumeraAssets = (function () {
+  const HEIGHTS = { tree: 2.3, bush: 0.7, rock: 0.55, house: 1.7, lamp: 2.1, prop: 0.9, beacon: 3.2, landmark: 3.6, flower: 0.25 };
+  let manifest = null, base = '', ready = false, pending = 0;
+  const templates = {}; // kind -> [Object3D]
+  const landmarks = {}; // isleId -> Object3D
+  const listeners = [];
+  let ramp = null;
+
+  function toonRamp() {
+    if (ramp) return ramp;
+    const c = document.createElement('canvas'); c.width = 4; c.height = 1;
+    const x = c.getContext('2d');
+    [[0, '#6f7fb8'], [1, '#a9b3d6'], [2, '#e2e6f2'], [3, '#ffffff']].forEach(([i, col]) => { x.fillStyle = col; x.fillRect(i, 0, 1, 1); });
+    ramp = new THREE.CanvasTexture(c); ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.generateMipmaps = false;
+    return ramp;
+  }
+  /* Re-shade a loaded model: keep albedo texture + color, swap to a toon material. */
+  function stylize(root) {
+    root.traverse(o => {
+      if (!o.isMesh) return;
+      o.castShadow = true; o.receiveShadow = true;
+      const mats = Array.isArray(o.material) ? o.material : [o.material];
+      const out = mats.map(m => {
+        if (!m) return m;
+        if (manifest && manifest.style === 'keep') return m;
+        const t = new THREE.MeshToonMaterial({ color: m.color ? m.color.clone() : new THREE.Color(0xffffff), map: m.map || null, gradientMap: toonRamp(), transparent: !!m.transparent, opacity: m.opacity === undefined ? 1 : m.opacity, side: m.side || THREE.FrontSide });
+        if (m.emissive) { t.emissive = m.emissive.clone(); t.emissiveIntensity = m.emissiveIntensity || 1; t.emissiveMap = m.emissiveMap || null; }
+        if (m.map) m.map.encoding = THREE.sRGBEncoding;
+        t.vertexColors = !!m.vertexColors;
+        return t;
+      });
+      o.material = Array.isArray(o.material) ? out : out[0];
+    });
+  }
+  /* Ground the model and scale it to the kind's target height. */
+  function normalize(root, kind) {
+    const box = new THREE.Box3().setFromObject(root);
+    const size = box.getSize(new THREE.Vector3());
+    const target = (manifest && manifest.heights && manifest.heights[kind]) || HEIGHTS[kind] || 1;
+    const s = size.y > 1e-6 ? target / size.y : 1;
+    const wrap = new THREE.Group();
+    root.scale.setScalar(s);
+    root.position.set(-(box.min.x + size.x / 2) * s, -box.min.y * s, -(box.min.z + size.z / 2) * s);
+    wrap.add(root);
+    return wrap;
+  }
+  function loadOne(url, kind, onDone) {
+    pending++;
+    new THREE.GLTFLoader().load(base + url, g => {
+      stylize(g.scene);
+      onDone(normalize(g.scene, kind));
+      if (--pending === 0) fire();
+    }, undefined, err => { console.warn('Numera asset missing:', url); if (--pending === 0) fire(); });
+  }
+  function fire() { ready = true; listeners.forEach(cb => { try { cb(); } catch (e) { console.error(e); } }); }
+
+  function init(assetBase) {
+    if (!assetBase || !window.THREE || !THREE.GLTFLoader) return;
+    base = assetBase;
+    fetch(base + 'manifest.json').then(r => r.ok ? r.json() : null).then(m => {
+      if (!m) return;
+      manifest = m;
+      const kit = m.kit || {};
+      Object.keys(kit).forEach(kind => {
+        const list = Array.isArray(kit[kind]) ? kit[kind] : [kit[kind]];
+        templates[kind] = [];
+        list.forEach(url => loadOne(url, kind, obj => templates[kind].push(obj)));
+      });
+      Object.keys(m.landmarks || {}).forEach(id => loadOne(m.landmarks[id], 'landmark', obj => { landmarks[id] = obj; }));
+      if (m.character && window.NumeraAvatar) NumeraAvatar.loadModel(base + m.character);
+      if (pending === 0) fire();
+    }).catch(() => { /* no manifest — procedural world */ });
+  }
+  /* A fresh clone of the i-th template of a kind (wraps around), or null. */
+  function get(kind, i) {
+    const list = templates[kind];
+    if (!list || !list.length) return null;
+    return list[((i || 0) % list.length + list.length) % list.length].clone(true);
+  }
+  function landmark(isleId) { return landmarks[isleId] ? landmarks[isleId].clone(true) : null; }
+  function onReady(cb) { listeners.push(cb); if (ready) cb(); }
+  const has = kind => !!(templates[kind] && templates[kind].length);
+  const toon = () => !manifest || manifest.style !== 'keep';
+
+  if (window.NUMERA_ASSETS) init(window.NUMERA_ASSETS);
+  return { init, get, landmark, onReady, has, toon, toonRamp, get ready() { return ready; }, get manifest() { return manifest; } };
+})();
+
+</script>
+<script>
+'use strict';
+/* ================================================================
    NUMERA — the living isle (Three.js r128 + post-processing)
    Home view: your Mathfinder walks a stylized island under a live
    sky. Rendering: shadow maps, ACES tone mapping, sRGB output via a
@@ -8179,7 +8279,7 @@ window.NumeraIsle = (function () {
   let renderer = null, composer = null, bloomPass = null, gradePass = null, ssaoPass = null;
   let scene, camera, running = false, rig = null, beacons = [], labels = [], container = null, labelWrap = null;
   let onSkillCb = null, isleSeed = 0, clouds = [], sun = null, hemi = null, sky = null, water = null, stars = null;
-  let grassU = { value: 0 }, pollen = null, fireflies = null, nightLights = [], anims = [], curIsle = null, curSkills = [];
+  let grassU = { value: 0 }, pollen = null, fireflies = null, nightLights = [], anims = [], curIsle = null, curSkills = [], curIsleIndex = 0;
   let walk = { target: null, pauseUntil: 0, speed: 0 };
   let ray = null, ptr = null, lastT = 0;
   const qs = new URLSearchParams(location.search), hourParam = qs.get('hour');
@@ -8188,7 +8288,17 @@ window.NumeraIsle = (function () {
 
   /* ---------------- helpers ---------------- */
   function rnd() { isleSeed = isleSeed * 16807 % 2147483647; return (isleSeed - 1) / 2147483646; }
-  const std = (color, extra) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.9, metalness: 0 }, extra || {}));
+  const TOON = () => !window.NumeraAssets || NumeraAssets.toon();
+  const std = (color, extra) => {
+    extra = extra || {};
+    if (TOON() && !extra.metalness) {
+      const t = new THREE.MeshToonMaterial({ color, gradientMap: NumeraAssets.toonRamp() });
+      ['map', 'emissiveIntensity', 'transparent', 'opacity', 'side', 'depthWrite'].forEach(k => { if (extra[k] !== undefined) t[k] = extra[k]; });
+      if (extra.emissive !== undefined) t.emissive = new THREE.Color(extra.emissive);
+      return t;
+    }
+    return new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.9, metalness: 0 }, extra));
+  };
   function put(geo, m, x, y, z, shadow) {
     const o = new THREE.Mesh(geo, m); o.position.set(x, y, z);
     if (shadow !== false) { o.castShadow = true; o.receiveShadow = true; }
@@ -8214,6 +8324,7 @@ window.NumeraIsle = (function () {
   }
   function buildComposer(w, h) {
     const hasPost = !!(THREE.EffectComposer && THREE.RenderPass && THREE.ShaderPass);
+    if (composer) { try { composer.renderTarget1.dispose(); composer.renderTarget2.dispose(); composer.passes.forEach(p => p.dispose && p.dispose()); } catch (e) { } composer = null; bloomPass = null; ssaoPass = null; }
     if (!hasPost || DBG.nopost) { composer = null; renderer.outputEncoding = THREE.sRGBEncoding; return; }
     renderer.outputEncoding = THREE.LinearEncoding;
     let target;
@@ -8293,7 +8404,7 @@ window.NumeraIsle = (function () {
     if (fireflies) fireflies.material.uniforms.uAlpha.value = L.night;
     beacons.forEach(b => { b.userData.gem.material.emissiveIntensity = 0.45 + 0.9 * L.night; });
     nightLights.forEach(l => { l.light.intensity = l.base * (0.15 + 0.85 * L.night); });
-    if (bloomPass) { bloomPass.strength = 0.14 + 0.36 * L.night; bloomPass.threshold = 0.94 - 0.38 * L.night; bloomPass.radius = 0.45 + 0.15 * L.night; }
+    if (bloomPass) { bloomPass.strength = 0.12 + 0.3 * L.night; bloomPass.threshold = 0.96 - 0.22 * L.night; bloomPass.radius = 0.45 + 0.15 * L.night; }
     if (gradePass) gradePass.uniforms.uTint.value.setRGB(1, 1 - L.night * 0.03, 1 + L.night * 0.05);
     clouds.forEach(c => c.children.forEach(m => { m.material.emissiveIntensity = 0.05 + 0.25 * L.day; m.material.color.copy(lerpC(0x3a4470, 0xffffff, L.day)); }));
   }
@@ -8470,10 +8581,12 @@ window.NumeraIsle = (function () {
   }
   function biome(isle, hue, n) {
     const a = landmarkAngle(n), R = 3.9, x = Math.cos(a) * R, z = Math.sin(a) * R;
+    const kitLandmark = window.NumeraAssets ? NumeraAssets.landmark(isle.id) : null;
+    if (kitLandmark) { kitLandmark.position.set(x, 0, z); kitLandmark.rotation.y = -a + Math.PI / 2; scene.add(kitLandmark); addNightLight(hue, 1.4, 7, x, 2.2, z); return { x, z, r: 2.8 }; }
     const rock = std(0x6e6a78), dark = std(0x1a1d33, { roughness: 0.5, metalness: 0.2 });
     switch (isle.id) {
       case 'ember': { // lighthouse
-        for (let i = 0; i < 4; i++) put(new THREE.CylinderGeometry(0.42 - i * 0.04, 0.46 - i * 0.04, 0.55, 20), std(i % 2 ? 0xe8503f : 0xf6f3ee), x, 0.275 + i * 0.55, z);
+        for (let i = 0; i < 4; i++) put(new THREE.CylinderGeometry(0.42 - i * 0.04, 0.46 - i * 0.04, 0.55, 20), std(i % 2 ? 0xe8503f : 0xe6e2d9), x, 0.275 + i * 0.55, z);
         put(new THREE.CylinderGeometry(0.34, 0.34, 0.45, 16), std(0xfff3c4, { emissive: 0xffd77a, emissiveIntensity: 1.2, transparent: true, opacity: 0.85 }), x, 2.42, z);
         put(new THREE.ConeGeometry(0.45, 0.4, 16), std(0x2a3a7a), x, 2.85, z);
         addNightLight(0xffd77a, 2.2, 9, x, 2.45, z);
@@ -8547,10 +8660,61 @@ window.NumeraIsle = (function () {
     return { x, z, r: 2.6 };
   }
 
+  /* ---------------- composed layout ----------------
+     Deliberate placement, the way a level designer would do it: tree groves in the
+     gaps between spokes framing the landmark, a town arc outside the ring, rocks along
+     the rim, bushes flanking each plaza, a lamp at every beacon. Kit models are used
+     for any kind the manifest provides; the rest are stylized primitives. */
+  const COMP = {
+    ember: { groves: 2, per: 3, rocks: 5, houses: 5 }, signs: { groves: 1, per: 3, rocks: 8, houses: 3 }, fraction: { groves: 2, per: 4, rocks: 6, houses: 4 },
+    delta: { groves: 1, per: 2, rocks: 3, houses: 7 }, ratio: { groves: 2, per: 3, rocks: 7, houses: 4 }, exponent: { groves: 1, per: 3, rocks: 9, houses: 3 },
+    algebra: { groves: 3, per: 4, rocks: 3, houses: 5 }, geometry: { groves: 3, per: 5, rocks: 4, houses: 3 }, func: { groves: 2, per: 4, rocks: 6, houses: 4 },
+    trig: { groves: 2, per: 3, rocks: 4, houses: 6 }, chance: { groves: 2, per: 3, rocks: 5, houses: 4 }, calculus: { groves: 1, per: 2, rocks: 10, houses: 2 },
+  };
+  let kitCounter = 0;
+  function placeKind(kind, x, z, rotDeg, scale, hue, n, avoid) {
+    if (onRoad(x, z, n) || (avoid && Math.hypot(x - avoid.x, z - avoid.z) < avoid.r)) return null;
+    const kit = window.NumeraAssets ? NumeraAssets.get(kind, kitCounter++) : null;
+    if (kit) { kit.position.set(x, 0, z); kit.rotation.y = rotDeg * Math.PI / 180; kit.scale.multiplyScalar(scale); scene.add(kit); return kit; }
+    const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rotDeg * Math.PI / 180; g.scale.setScalar(scale); scene.add(g);
+    const add = (geo, m, y, sh) => { const o = new THREE.Mesh(geo, m); o.position.y = y; o.castShadow = sh !== false; o.receiveShadow = true; g.add(o); return o; };
+    switch (kind) {
+      case 'tree': { const leaf = std(hue.clone().lerp(new THREE.Color(0x2f9a5c), 0.75)), trunk = std(0x6b4b2e); add(new THREE.CylinderGeometry(0.06, 0.1, 1.0, 8), trunk, 0.5); const c = add(new THREE.SphereGeometry(0.62, 16, 12), leaf, 1.35); c.scale.y = 1.25; add(new THREE.SphereGeometry(0.4, 14, 10), leaf, 1.95).position.x = 0.25; break; }
+      case 'bush': { const c = add(new THREE.SphereGeometry(0.42, 14, 10), std(hue.clone().lerp(new THREE.Color(0x3aa86a), 0.7)), 0.28); c.scale.set(1.3, 0.75, 1.1); break; }
+      case 'rock': { const r = add(new THREE.DodecahedronGeometry(0.42, 0), std(0x7a7887, { flatShading: true }), 0.25); r.scale.set(1.3, 0.8, 1); r.rotation.y = rotDeg; break; }
+      case 'house': { const w = 0.9 + (kitCounter % 3) * 0.2; add(new THREE.BoxGeometry(w, 0.9, 0.9), std(0xf4efe4), 0.45); add(new THREE.ConeGeometry(0.85, 0.7, 4), std(hue.clone().lerp(new THREE.Color(0xc25b4a), 0.6)), 1.25).rotation.y = Math.PI / 4; add(new THREE.BoxGeometry(0.2, 0.3, 0.05), std(0x5b3d24), 0.35).position.z = 0.46; break; }
+      case 'lamp': { add(new THREE.CylinderGeometry(0.035, 0.05, 1.7, 8), std(0x2c3050), 0.85); add(new THREE.SphereGeometry(0.11, 10, 8), std(0xffe9a8, { emissive: 0xffd77a, emissiveIntensity: 1.2 }), 1.8, false); addNightLight(0xffd77a, 1.2, 4.5, x, 1.8, z); break; }
+      case 'prop': { add(new THREE.BoxGeometry(0.45, 0.45, 0.45), std(0x9a7a4a), 0.225); break; }
+    }
+    return g;
+  }
+  function compose(isle, hue, n, avoid) {
+    const c = COMP[isle.id] || COMP.ember; kitCounter = isleSeed % 7;
+    const lmA = Math.atan2(avoid.z, avoid.x);
+    const dAng = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+    const FRONT = Math.PI / 2; // the camera looks in from +z; nothing tall may stand between it and the wanderer
+    const gaps = []; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; if (dAng(a, lmA) > 0.3 && dAng(a, FRONT) > 0.85) gaps.push(a); }
+    gaps.sort((a, b) => dAng(b, FRONT) - dAng(a, FRONT)); // farthest from the camera first
+    // groves: tight clusters in the gaps, sized big → small toward the edge, framing the landmark
+    gaps.slice(0, c.groves).forEach((a, gi) => {
+      const r0 = 3.6 + (gi % 2) * 0.5, cx = Math.cos(a) * r0, cz = Math.sin(a) * r0;
+      for (let k = 0; k < c.per; k++) { const ang = k * 2.4 + gi, rad = k === 0 ? 0 : 0.8 + (k % 2) * 0.55; placeKind('tree', cx + Math.cos(ang) * rad, cz + Math.sin(ang) * rad, rnd() * 360, k === 0 ? 1.0 : 0.7 + rnd() * 0.25, hue, n, avoid); }
+      placeKind('bush', cx + 1.2, cz - 0.4, rnd() * 360, 0.9, hue, n, avoid); placeKind('rock', cx - 1.1, cz + 0.6, rnd() * 360, 0.7, hue, n, avoid);
+    });
+    // town: an arc of houses outside the ring in the gap facing the camera, doors toward the center
+    const townA = gaps.length ? gaps.reduce((best, a) => dAng(a, FRONT + 1.4) < dAng(best, FRONT + 1.4) ? a : best, gaps[0]) : FRONT + 1.4; // front-right, out of the sight line
+    for (let k = 0; k < c.houses; k++) { const a = townA + (k - (c.houses - 1) / 2) * 0.17, r = 7.2 + (k % 2) * 0.7; placeKind('house', Math.cos(a) * r, Math.sin(a) * r, -a * 180 / Math.PI - 90, 0.9 + rnd() * 0.2, hue, n, avoid); }
+    placeKind('lamp', Math.cos(townA) * 6.5, Math.sin(townA) * 6.5, 0, 1, hue, n, avoid);
+    placeKind('prop', Math.cos(townA + 0.25) * 6.6, Math.sin(townA + 0.25) * 6.6, 20, 1, hue, n, avoid);
+    // rocks along the rim, and a lamp beside every beacon plaza
+    for (let k = 0; k < c.rocks; k++) { const a = k / c.rocks * Math.PI * 2 + rnd() * 0.3, r = 8.1 + rnd() * 0.5; placeKind('rock', Math.cos(a) * r, Math.sin(a) * r, rnd() * 360, 0.6 + rnd() * 0.8, hue, n, avoid); }
+    for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + Math.PI / n, side = new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)); const p = new THREE.Vector3(Math.cos(a), 0, Math.sin(a)).multiplyScalar(5.85).add(side.clone().multiplyScalar(0.8)); placeKind('lamp', p.x, p.z, 0, 0.9, hue, n, null); placeKind('bush', p.x - side.x * 1.6, p.z - side.z * 1.6, rnd() * 360, 0.8, hue, n, null); }
+  }
+
   /* ---------------- scene ---------------- */
   function buildScene(isle, isleIndex, skills) {
     isleSeed = isleIndex * 2711 + 13;
-    beacons = []; clouds = []; nightLights = []; anims = []; curIsle = isle; curSkills = skills;
+    beacons = []; clouds = []; nightLights = []; anims = []; curIsle = isle; curSkills = skills; curIsleIndex = isleIndex;
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0xcfe3f2, 34, 120);
     camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 400);
@@ -8574,7 +8738,7 @@ window.NumeraIsle = (function () {
     put(new THREE.CylinderGeometry(ISLE_R + 0.4, ISLE_R - 1.5, 1.6, 64), std(hue.clone().lerp(new THREE.Color(0x6b5a4a), 0.7)), 0, -1.3, 0, false);
 
     // roads: ring, spokes, plazas
-    const road = std(0x5b6474, { roughness: 0.95 }), edge = std(0xf4d36a, { roughness: 0.8 }), stone = std(0xe1e6ea);
+    const road = std(0x5b6474, { roughness: 0.95 }), edge = std(0xf4d36a, { roughness: 0.8 }), stone = std(0xcfd5da);
     const ringW = 0.7;
     flat(new THREE.RingGeometry(RING_R - ringW / 2, RING_R + ringW / 2, 96), road, 0, 0.012, 0);
     flat(new THREE.RingGeometry(RING_R - ringW / 2 - 0.09, RING_R - ringW / 2, 96), edge, 0, 0.014, 0);
@@ -8598,18 +8762,9 @@ window.NumeraIsle = (function () {
       grp.userData = { id: sk.id, i, gem, halo }; scene.add(grp); beacons.push(grp);
     });
 
-    // town blocks (translucent teal), landmark, trees, grass, clouds
-    const block = new THREE.MeshPhysicalMaterial({ color: 0x8fe6d6, transparent: true, opacity: 0.55, roughness: 0.25 });
-    for (let i = 0; i < 16; i++) { const a = rnd() * Math.PI * 2, r = 6.9 + rnd() * 1.6, w = 0.5 + rnd() * 0.9, h = 0.3 + rnd() * 1.1, d = 0.5 + rnd() * 0.9; put(new THREE.BoxGeometry(w, h, d), block, Math.cos(a) * r, h / 2, Math.sin(a) * r).rotation.y = rnd() * Math.PI; }
+    // landmark (kit model when present), then a composed layout instead of random scatter
     const avoid = biome(isle, hue, n);
-    const leaf = std(hue.clone().lerp(new THREE.Color(0x2f9a5c), 0.75)), trunk = std(0x6b4b2e);
-    for (let i = 0, tries = 0; i < 7 && tries < 40; tries++) {
-      const a = rnd() * Math.PI * 2, r = 2.6 + rnd() * 1.7, x = Math.cos(a) * r, z = Math.sin(a) * r;
-      if (Math.hypot(x - avoid.x, z - avoid.z) < avoid.r) continue;
-      const h = 0.7 + rnd() * 0.4;
-      put(new THREE.CylinderGeometry(0.05, 0.08, h, 8), trunk, x, h / 2, z);
-      put(new THREE.SphereGeometry(0.3 + rnd() * 0.18, 14, 12), leaf, x, h + 0.22, z).scale.y = 1.2; i++;
-    }
+    compose(isle, hue, n, avoid);
     plantGrass(isle.hue, n, avoid);
     for (let i = 0; i < 9; i++) clouds.push(cloud((rnd() - 0.5) * 60, 11 + rnd() * 6, -14 - rnd() * 30, 1.2 + rnd() * 1.2));
     pollen = particles(mobile ? 60 : 140, 0xfff2c4, 2.4, false);
@@ -8726,9 +8881,11 @@ window.NumeraIsle = (function () {
     if (reduced) { frame(1500); return; }
     if (!running) { running = true; requestAnimationFrame(loop); }
   }
+  function rebuild() { if (container && curIsle) mount(container, labelWrap, curIsle, curIsleIndex, curSkills, onSkillCb); }
+  if (window.NumeraAssets) NumeraAssets.onReady(() => { if (scene) rebuild(); });
   // when a real glTF character arrives after the scene exists, swap it in
   if (window.NumeraAvatar && NumeraAvatar.onModel) NumeraAvatar.onModel(() => { if (scene && rig) placeCharacter(); });
-  return { mount, stop, resume, get ready() { ensureRenderer(); return !!renderer; } };
+  return { mount, stop, resume, rebuild, get ready() { ensureRenderer(); return !!renderer; } };
 })();
 
 </script>

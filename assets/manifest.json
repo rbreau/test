@@ -1,0 +1,28 @@
+{
+  "_comment": "Numera asset manifest. Paths are relative to this folder. Every kind is optional — anything missing falls back to the built-in stylized placeholders. 'style': 'toon' re-shades all models with the stepped ramp; 'keep' leaves their materials.",
+  "style": "toon",
+  "character": "mathfinder.glb",
+  "heights": { "tree": 2.3, "bush": 0.7, "rock": 0.55, "house": 1.7, "lamp": 2.1, "prop": 0.9, "landmark": 3.6 },
+  "kit": {
+    "tree":  ["kit/tree-1.glb", "kit/tree-2.glb"],
+    "bush":  ["kit/bush-1.glb"],
+    "rock":  ["kit/rock-1.glb", "kit/rock-2.glb"],
+    "house": ["kit/house-1.glb", "kit/house-2.glb"],
+    "lamp":  ["kit/lamp-1.glb"],
+    "prop":  ["kit/prop-1.glb"]
+  },
+  "landmarks": {
+    "ember": "kit/landmark-ember.glb",
+    "signs": "kit/landmark-signs.glb",
+    "fraction": "kit/landmark-fraction.glb",
+    "delta": "kit/landmark-delta.glb",
+    "ratio": "kit/landmark-ratio.glb",
+    "exponent": "kit/landmark-exponent.glb",
+    "algebra": "kit/landmark-algebra.glb",
+    "geometry": "kit/landmark-geometry.glb",
+    "func": "kit/landmark-func.glb",
+    "trig": "kit/landmark-trig.glb",
+    "chance": "kit/landmark-chance.glb",
+    "calculus": "kit/landmark-calculus.glb"
+  }
+}

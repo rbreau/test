@@ -1,18 +1,32 @@
-# Character assets (optional)
+# Assets — drop real models here
 
-Drop a rigged, animated glTF binary here as **`mathfinder.glb`** and the game will
-use it instead of the procedural Mathfinder — on the title screen, in the level-up
-ceremony, and walking the island. Nothing else needs to change.
+The game reads **`manifest.json`** in this folder (only when served over HTTP — GitHub Pages,
+or `python3 -m http.server` locally). Every model it names is preloaded, grounded, scaled to
+a per-kind height, re-shaded with the toon ramp, and placed by the island composer.
+**Anything missing is skipped silently** and the stylized placeholder is used instead, so
+you can add models one at a time and watch the world upgrade.
 
-Requirements:
-- Any humanoid scale (auto-normalized to 1.8 units tall, feet on the ground).
-- Animation clips whose names contain **idle**, **walk** (or run), and optionally
-  **celebrate** / **dance** / **jump** / **wave**. Mixamo exports keep these names.
-- Keep it small: under ~3 MB loads instantly; embed textures in the .glb.
+## File map
 
-Suggested free pipeline: pick a stylized character from Quaternius or Kenney (CC0), or
-build one at readyplayer.me; retarget Mixamo "Idle", "Walking" and "Victory" clips in
-Blender; export as glTF Binary with animations.
+| Put here | Kind | Suggested source |
+|---|---|---|
+| `mathfinder.glb` | The player character (rigged, with clips named idle / walk / celebrate) | Quaternius *Ultimate Animated Character Pack* (CC0), or Mixamo retarget |
+| `kit/tree-1.glb`, `tree-2.glb` | Trees | Quaternius *Ultimate Nature Pack* / Kenney *Nature Kit* |
+| `kit/bush-1.glb` | Bushes | same |
+| `kit/rock-1.glb`, `rock-2.glb` | Rocks | same |
+| `kit/house-1.glb`, `house-2.glb` | Small houses (the rim town) | Kenney *Fantasy Town Kit* / Quaternius village packs |
+| `kit/lamp-1.glb` | Lamp post (lit at night) | Kenney Fantasy Town Kit |
+| `kit/prop-1.glb` | Crate, barrel, cart… | any |
+| `kit/landmark-<isle>.glb` | One hero prop per island (see manifest for the twelve ids) | mix of the above; a lighthouse, ruins, a shrine… |
 
-The file is only fetched when the game is served over HTTP (e.g. GitHub Pages or a
-local server) — the single-file build in `dist/` always uses the procedural avatar.
+Add more variants by extending the arrays in `manifest.json`. Formats: `.glb` (binary glTF)
+with embedded textures. Keep each under ~1 MB; the whole kit under ~15 MB.
+
+The three `kit/*.glb` files that ship in the repo are tiny generated stand-ins that prove the
+pipeline works — replace them.
+
+## Character clip names
+
+The loader looks for animation clips whose names contain **idle** (or stand/breath), **walk**
+(or run/jog), and **celebrate** (or dance/jump/cheer/wave/victory). Quaternius and Mixamo
+exports already use these words.
