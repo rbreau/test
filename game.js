@@ -652,11 +652,11 @@ function spawnSparks(host, n) {
     setTimeout(() => s.remove(), 850);
   }
 }
-function toast(html) {
+function toast(html, ms) {
   const t = document.createElement('div');
   t.className = 'toast'; t.innerHTML = html;
   $('#toasts').appendChild(t);
-  setTimeout(() => t.remove(), 4200);
+  setTimeout(() => t.remove(), ms || 4200);
 }
 
 /* ================================================================
@@ -813,6 +813,7 @@ function renderHome() {
   if (window.NumeraIsle && NumeraIsle.setCompanions) NumeraIsle.setCompanions(Object.keys(S.numen).length, Object.values(S.numen).filter(v => v === 2).length);
   const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
   $('#isle3dWrap').classList.toggle('flat', !ok);
+  if (ok && !S.featSeen.controls) { S.featSeen.controls = 1; save(); toast('<b>Tap</b> to walk · <b>drag</b> to look around · <b>pinch</b> to zoom · tap a <b>sigil</b> for its trials', 9000); }
   $('#skillList').hidden = !!ok;
   if (!ok) renderSkillList(i);
 }

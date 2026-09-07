@@ -367,7 +367,6 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .io-arc{color:var(--gold);font-size:10.5px;letter-spacing:.3em;text-transform:uppercase}
 #ioName{font-size:24px;letter-spacing:.04em;line-height:1.1}
 #ioCrowns{color:var(--dim);font-size:12.5px;font-family:var(--font-mono);margin-top:2px}
-.io-hint{color:#93a5c4aa;font-size:11px;margin-top:6px;letter-spacing:.02em}
 #isle3d canvas{touch-action:none;cursor:grab}
 #isle3d canvas:active{cursor:grabbing}
 #setSail{position:absolute;top:14px;right:14px;z-index:3;background:#0a0e23b8;backdrop-filter:blur(8px);color:var(--parchment)}
@@ -388,14 +387,32 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
   background:#0a0e23d6;backdrop-filter:blur(10px);border-color:#f2c14e88;
 }
 @media (max-width:640px){
+  /* compact overlays: the world should own the screen on a phone */
+  #isleOverlay{top:10px;left:10px;padding:5px 10px 6px;border-radius:10px}
+  .io-arc{display:none}
+  #ioName{font-size:15px;line-height:1.2}
+  #ioCrowns{font-size:11px;margin-top:0}
+  #setSail{top:10px;right:10px;padding:6px 9px;font-size:16px;line-height:1}
+  .setSail-txt{display:none}
+  #isle3dWrap #guideCard{left:10px;right:10px;bottom:10px;padding:8px 8px 8px 14px;gap:10px;flex-wrap:nowrap;align-items:center}
+  #guideText{min-width:0;flex:1}
+  .guide-eyebrow{display:none}
+  #guideDesc{font-size:13px;min-width:0}
+  #guideDesc b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #guideDesc .gd-sub{display:none}
+  #guideBtn{padding:9px 14px;font-size:14px;white-space:nowrap;flex:none}
+  #toasts{top:96px;bottom:auto;left:12px;right:12px;align-items:stretch}
+  .toast{max-width:none;font-size:13px}
+  .hud-level{min-width:0;flex:1 1 140px}
+  .xplabel span{display:none}
+  .xplabel b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+  .hud-stats{gap:8px;font-size:13px}
   #app{padding:0 12px 40px}
   #hud{margin:10px 0 12px;padding:10px 12px;gap:10px}
   .brand{font-size:16px}.brand small{display:none}
   .hud-level{min-width:150px}
   .hud-nav button{padding:7px 10px;font-size:12px}
   #isle3dWrap{margin:0 -12px;border-radius:0;border-left:none;border-right:none;height:calc(100vh - 140px);min-height:560px}
-  #isle3dWrap #guideCard{left:10px;right:10px;bottom:12px;padding:12px 14px}
-  #guideDesc{font-size:14px}#guideDesc b{font-size:15.5px}
   #ioName{font-size:20px}
 }
 
