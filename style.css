@@ -349,30 +349,50 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 
 /* ---------------- the living isle (home view) ---------------- */
 #isle3dWrap{
-  position:relative;border:1px solid var(--ink-line);border-radius:16px;overflow:hidden;
-  background:
-    radial-gradient(900px 380px at 50% 115%,#12377144,transparent),
-    linear-gradient(180deg,#0b1130,#0c1636);
+  position:relative;border:1px solid var(--ink-line);border-radius:18px;overflow:hidden;
+  height:clamp(520px,calc(100vh - 150px),860px);
+  background:linear-gradient(180deg,#4f9be8,#a9d6f5 55%,#e6f1f7);
 }
-#isle3dWrap[hidden]{display:none}
-#isle3d canvas{display:block;width:100%}
-#isleOverlay{position:absolute;top:16px;left:20px;z-index:3;pointer-events:none}
-.io-arc{color:var(--gold);font-size:11px;letter-spacing:.3em;text-transform:uppercase}
-#ioName{font-size:26px;letter-spacing:.05em;text-shadow:0 2px 12px #05081c}
-#ioCrowns{color:var(--dim);font-size:13px;font-family:var(--font-mono)}
-#setSail{position:absolute;top:16px;right:16px;z-index:3;background:#121936cc}
+#isle3dWrap.flat{height:auto;background:none;border:none}
+#isle3dWrap.flat #isle3d,#isle3dWrap.flat #isleLabels,#isle3dWrap.flat #isleOverlay,#isle3dWrap.flat #setSail{display:none}
+#isle3dWrap.flat #guideCard{position:static;margin-bottom:14px}
+#isle3d{position:absolute;inset:0}
+#isle3d canvas{display:block;width:100%!important;height:100%!important}
+#isleOverlay{
+  position:absolute;top:14px;left:16px;z-index:3;pointer-events:none;
+  background:#0a0e23b8;backdrop-filter:blur(8px);border-radius:14px;padding:10px 16px 11px;
+}
+.io-arc{color:var(--gold);font-size:10.5px;letter-spacing:.3em;text-transform:uppercase}
+#ioName{font-size:24px;letter-spacing:.04em;line-height:1.1}
+#ioCrowns{color:var(--dim);font-size:12.5px;font-family:var(--font-mono);margin-top:2px}
+#setSail{position:absolute;top:14px;right:14px;z-index:3;background:#0a0e23b8;backdrop-filter:blur(8px);color:var(--parchment)}
 #isleLabels{position:absolute;inset:0;z-index:2;pointer-events:none}
 .isleLabel{
   position:absolute;transform:translate(-50%,-100%);pointer-events:auto;
-  background:#0a0e23d9;border:1px solid var(--ink-line);border-radius:99px;
-  color:var(--parchment);font-family:var(--font-body);font-size:12.5px;
-  padding:4px 12px;white-space:nowrap;transition:border-color .15s;
+  background:#0a0e23cc;border:1px solid #ffffff33;border-radius:99px;
+  color:var(--parchment);font-family:var(--font-body);font-size:12.5px;font-weight:700;
+  padding:5px 13px;white-space:nowrap;transition:border-color .15s,opacity .3s;
+  box-shadow:0 4px 14px #0a0e2333;
 }
 .isleLabel:hover,.isleLabel:focus-visible{border-color:var(--gold);outline:none}
 .isleLabel i{font-style:normal;color:var(--gold);margin-left:6px;letter-spacing:.1em}
-#isleHint{color:var(--dim);font-size:13px;text-align:center;margin:10px 0 0}
-#isleHint[hidden]{display:none}
 #skillList[hidden]{display:none}
+/* the guide rides inside the world as a bubble */
+#isle3dWrap #guideCard{
+  position:absolute;left:16px;right:16px;bottom:16px;z-index:4;margin:0;
+  background:#0a0e23d6;backdrop-filter:blur(10px);border-color:#f2c14e88;
+}
+@media (max-width:640px){
+  #app{padding:0 12px 40px}
+  #hud{margin:10px 0 12px;padding:10px 12px;gap:10px}
+  .brand{font-size:16px}.brand small{display:none}
+  .hud-level{min-width:150px}
+  .hud-nav button{padding:7px 10px;font-size:12px}
+  #isle3dWrap{margin:0 -12px;border-radius:0;border-left:none;border-right:none;height:calc(100vh - 140px);min-height:560px}
+  #isle3dWrap #guideCard{left:10px;right:10px;bottom:12px;padding:12px 14px}
+  #guideDesc{font-size:14px}#guideDesc b{font-size:15.5px}
+  #ioName{font-size:20px}
+}
 
 /* ---------------- mental-math whisper ---------------- */
 #qTipBox{

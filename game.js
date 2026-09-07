@@ -810,8 +810,7 @@ function renderHome() {
   $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
   const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
   const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
-  $('#isle3dWrap').hidden = !ok;
-  $('#isleHint').hidden = !ok;
+  $('#isle3dWrap').classList.toggle('flat', !ok);
   $('#skillList').hidden = !!ok;
   if (!ok) renderSkillList(i);
 }

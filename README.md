@@ -86,7 +86,8 @@ Every game mechanic maps to an evidence-backed learning principle:
 
 - `index.html` — page skeleton
 - `style.css` — the "starlight cartography" theme
-- `avatar.js` — the 3D Mathfinder avatar (Three.js) and the level-up ceremony
+- `avatar.js` — the articulated 3D Mathfinder (Three.js): smooth-shaded humanoid with a
+  walk cycle, plus the level-up ceremony
 - `island3d.js` — the living-isle home view: your avatar wandering the current island,
   with clickable sigil-crystals for each art (falls back to a list without WebGL)
 - `game.js` — world data, 37 problem generators, learning engine, UI
