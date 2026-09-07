@@ -365,6 +365,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .io-arc{color:var(--gold);font-size:10.5px;letter-spacing:.3em;text-transform:uppercase}
 #ioName{font-size:24px;letter-spacing:.04em;line-height:1.1}
 #ioCrowns{color:var(--dim);font-size:12.5px;font-family:var(--font-mono);margin-top:2px}
+.io-hint{color:#93a5c4aa;font-size:11px;margin-top:6px;letter-spacing:.02em}
+#isle3d canvas{touch-action:none;cursor:crosshair}
 #setSail{position:absolute;top:14px;right:14px;z-index:3;background:#0a0e23b8;backdrop-filter:blur(8px);color:var(--parchment)}
 #isleLabels{position:absolute;inset:0;z-index:2;pointer-events:none}
 .isleLabel{

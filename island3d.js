@@ -19,6 +19,8 @@ window.NumeraIsle = (function () {
   let grassU = { value: 0 }, pollen = null, fireflies = null, nightLights = [], anims = [], curIsle = null, curSkills = [], curIsleIndex = 0;
   let walk = { target: null, pauseUntil: 0, speed: 0 };
   let ray = null, ptr = null, lastT = 0;
+  let landmarkZone = null, tapMarker = null, markerT = -1, ptrDown = false, lastSteer = 0, mountCount = 0;
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const qs = new URLSearchParams(location.search), hourParam = qs.get('hour');
   const DBG = { nossao: qs.has('nossao'), nobloom: qs.has('nobloom'), nopost: qs.has('nopost') };
   const STATE_COLOR = { 0: 0xf2c14e, 1: 0x8b7cf6, 2: 0x45d6b5, 3: 0xffffff };
@@ -56,7 +58,10 @@ window.NumeraIsle = (function () {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     ray = new THREE.Raycaster(); ptr = new THREE.Vector2();
-    renderer.domElement.addEventListener('pointerdown', onPointer);
+    renderer.domElement.style.touchAction = 'none';
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => renderer.domElement.addEventListener(ev, () => { ptrDown = false; }));
     addEventListener('resize', resize);
   }
   function buildComposer(w, h) {
@@ -500,8 +505,10 @@ window.NumeraIsle = (function () {
     });
 
     // landmark (kit model when present), then a composed layout instead of random scatter
-    const avoid = biome(isle, hue, n);
+    const avoid = biome(isle, hue, n); landmarkZone = avoid;
     compose(isle, hue, n, avoid);
+    tapMarker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.34, 32), new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0, depthWrite: false }));
+    tapMarker.rotation.x = -Math.PI / 2; tapMarker.position.y = 0.03; tapMarker.visible = false; scene.add(tapMarker);
     plantGrass(isle.hue, n, avoid);
     for (let i = 0; i < 9; i++) clouds.push(cloud((rnd() - 0.5) * 60, 11 + rnd() * 6, -14 - rnd() * 30, 1.2 + rnd() * 1.2));
     pollen = particles(mobile ? 60 : 140, 0xfff2c4, 2.4, false);
@@ -540,21 +547,25 @@ window.NumeraIsle = (function () {
       b.userData.halo.rotation.z = s * 0.5; b.userData.halo.scale.setScalar(1 + Math.sin(s * 2 + i) * 0.06);
     });
     clouds.forEach(c => { c.position.x += c.userData.speed * dt; if (c.position.x > 40) c.position.x = -40; });
+    if (tapMarker && markerT >= 0) { const p = (t - markerT) / 700; if (p >= 1) { tapMarker.visible = false; markerT = -1; } else { tapMarker.visible = true; tapMarker.scale.setScalar(0.6 + p * 1.1); tapMarker.material.opacity = 0.9 * (1 - p); } }
     if (rig) {
       if (!reduced) {
         if (walk.target) {
           const d = walk.target.clone().sub(rig.g.position); d.y = 0;
           const dist = d.length();
-          if (dist < 0.1) { walk.target = null; walk.pauseUntil = t + 1500 + Math.random() * 3000; }
+          if (dist < 0.1) {
+            walk.target = null; walk.pauseUntil = t + (walk.manual ? 9000 : 1500 + Math.random() * 3000);
+            const cb = walk.onArrive; walk.onArrive = null; walk.manual = false; if (cb) cb();
+          }
           else {
-            walk.speed = Math.min(1, walk.speed + 0.03);
-            rig.g.position.add(d.normalize().multiplyScalar(1.35 * walk.speed * dt));
+            walk.speed = Math.min(1, walk.speed + 1.8 * dt); // frame-rate independent ramp (~0.55 s to full stride)
+            rig.g.position.add(d.normalize().multiplyScalar((walk.manual ? 1.9 : 1.35) * walk.speed * dt));
             const want = Math.atan2(d.x, d.z);
             let diff = want - rig.g.rotation.y;
             while (diff > Math.PI) diff -= Math.PI * 2; while (diff < -Math.PI) diff += Math.PI * 2;
             rig.g.rotation.y += diff * 0.08;
           }
-        } else { walk.speed = Math.max(0, walk.speed - 0.05); if (t > walk.pauseUntil) walk.target = pickTarget(); }
+        } else { walk.speed = Math.max(0, walk.speed - 3 * dt); if (t > walk.pauseUntil) walk.target = pickTarget(); }
         const p = rig.g.position;
         const back = camera.aspect < 1 ? 8.2 : 6.6, up = camera.aspect < 1 ? 4.4 : 3.7;
         camera.position.lerp(new THREE.Vector3(p.x, up, p.z + back), 0.035);
@@ -577,12 +588,42 @@ window.NumeraIsle = (function () {
     });
   }
   function loop(t) { if (!running) return; if (!document.hidden) frame(t); requestAnimationFrame(loop); }
-  function onPointer(e) {
+  /* ---- tap to move: tap the ground to walk there, hold to steer, tap a beacon to walk up and open its trials */
+  function setPointer(e) {
     const r = renderer.domElement.getBoundingClientRect();
     ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1; ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
     ray.setFromCamera(ptr, camera);
+  }
+  function clampToIsle(p) {
+    const r = Math.hypot(p.x, p.z), maxR = ISLE_R - 0.9;
+    if (r > maxR) { p.x *= maxR / r; p.z *= maxR / r; }
+    if (landmarkZone) { const dx = p.x - landmarkZone.x, dz = p.z - landmarkZone.z, d = Math.hypot(dx, dz); if (d < landmarkZone.r) { const k = landmarkZone.r / Math.max(d, 1e-3); p.x = landmarkZone.x + dx * k; p.z = landmarkZone.z + dz * k; } }
+    p.y = 0; return p;
+  }
+  function walkTo(p, onArrive, showMarker) {
+    if (!rig) return;
+    walk.target = clampToIsle(p.clone()); walk.manual = true; walk.onArrive = onArrive || null;
+    if (showMarker && tapMarker) { tapMarker.position.set(walk.target.x, 0.03, walk.target.z); markerT = performance.now(); }
+  }
+  function groundPoint() { const hit = new THREE.Vector3(); return ray.ray.intersectPlane(groundPlane, hit) ? hit : null; }
+  function onPointerDown(e) {
+    if (!rig) return;
+    setPointer(e);
     const hits = ray.intersectObjects(beacons, true);
-    if (hits.length && onSkillCb) { let o = hits[0].object; while (o && !o.userData.id) o = o.parent; if (o) onSkillCb(o.userData.id); }
+    if (hits.length) {
+      let o = hits[0].object; while (o && !o.userData.id) o = o.parent;
+      if (o) { const id = o.userData.id; const toward = o.position.clone().multiplyScalar(1 - 1.25 / o.position.length()); // stop at the plaza edge
+        walkTo(toward, () => { if (onSkillCb) onSkillCb(id); }, true); }
+      return;
+    }
+    const g = groundPoint(); if (!g) return;
+    ptrDown = true; lastSteer = performance.now();
+    walkTo(g, null, true);
+  }
+  function onPointerMove(e) {
+    if (!ptrDown || !rig) return;
+    const now = performance.now(); if (now - lastSteer < 60) return; lastSteer = now;
+    setPointer(e); const g = groundPoint(); if (g) walkTo(g, null, false);
   }
   function resize() {
     if (!renderer || !container || !container.isConnected) return;
@@ -595,7 +636,7 @@ window.NumeraIsle = (function () {
   function mount(cont, lw, isle, isleIndex, skills, onSkill) {
     ensureRenderer();
     if (!renderer) return false;
-    container = cont; labelWrap = lw; onSkillCb = onSkill;
+    container = cont; labelWrap = lw; onSkillCb = onSkill; mountCount++;
     buildScene(isle, isleIndex, skills);
     cont.innerHTML = ''; cont.appendChild(renderer.domElement);
     const w = cont.clientWidth || 800, h = cont.clientHeight || 520;
@@ -622,5 +663,8 @@ window.NumeraIsle = (function () {
   if (window.NumeraAssets) NumeraAssets.onReady(() => { if (scene) rebuild(); });
   // when a real glTF character arrives after the scene exists, swap it in
   if (window.NumeraAvatar && NumeraAvatar.onModel) NumeraAvatar.onModel(() => { if (scene && rig) placeCharacter(); });
-  return { mount, stop, resume, rebuild, get ready() { ensureRenderer(); return !!renderer; } };
+  // small debug surface (tests + tuning)
+  function worldToScreen(x, z) { if (!renderer) return null; const v = new THREE.Vector3(x, 0, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, behind: v.z > 1 }; }
+  function beaconScreenPos(i) { const b = beacons[i]; if (!b || !renderer) return null; const v = b.position.clone(); v.y += 1.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }
+  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
 })();
