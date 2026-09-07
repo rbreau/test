@@ -1,0 +1,107 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+  <Style src="Numera.uss" />
+  <ui:VisualElement name="root" class="root" picking-mode="Ignore">
+
+    <ui:VisualElement name="hud" class="hud">
+      <ui:Label text="✦ NUMERA" class="brand" />
+      <ui:VisualElement class="hud-level">
+        <ui:Label name="lvlOrb" text="1" class="orb" />
+        <ui:VisualElement class="xpwrap">
+          <ui:VisualElement class="xplabel"><ui:Label name="lvlName" text="Novice of the Shore" class="lvlname" /><ui:Label name="xpText" text="0 / 100 XP" class="xptext" /></ui:VisualElement>
+          <ui:VisualElement class="xpbar"><ui:VisualElement name="xpFill" class="xpfill" /></ui:VisualElement>
+        </ui:VisualElement>
+      </ui:VisualElement>
+      <ui:Label name="lumins" text="◈ 0" class="stat lum" />
+      <ui:Label name="streak" text="✹ 0" class="stat streak" />
+      <ui:VisualElement class="nav">
+        <ui:Button name="nav-home" text="My Isle" class="navbtn" />
+        <ui:Button name="nav-map" text="World" class="navbtn" />
+        <ui:Button name="nav-echo" text="Echo Tide" class="navbtn" />
+        <ui:Button name="nav-dex" text="Numendex" class="navbtn" />
+        <ui:Button name="nav-medals" text="Medals" class="navbtn" />
+        <ui:Button name="nav-shop" text="Bazaar" class="navbtn" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="screen-title" class="screen title">
+      <ui:Label text="✦ ✧ ✦" class="sigil" />
+      <ui:Label text="NUMERA" class="title-h1" />
+      <ui:Label text="THE SHATTERED ISLES OF NUMBER" class="title-sub" />
+      <ui:Label class="story" text="Long ago, the archipelago of Numera hummed with living mathematics. Then came the Null — a silence that unsolved the world. You are a Mathfinder. Every problem you solve returns a little light. Master an art, and its Numen will return to you. Restore every isle, gather every spirit, and face the Null itself." />
+      <ui:VisualElement class="row">
+        <ui:TextField name="nameInput" class="namefield" />
+        <ui:Button name="beginBtn" text="Light the First Lantern" class="btn-primary" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="screen-home" class="screen home" picking-mode="Ignore">
+      <ui:VisualElement name="isleLabels" class="isle-labels" picking-mode="Ignore" />
+      <ui:VisualElement class="isle-overlay">
+        <ui:Label name="ioArc" class="io-arc" />
+        <ui:Label name="ioName" class="io-name" />
+        <ui:Label name="ioCrowns" class="io-crowns" />
+      </ui:VisualElement>
+      <ui:Button name="setSail" text="🧭 World Map" class="btn-ghost setsail" />
+      <ui:VisualElement name="guideCard" class="guide">
+        <ui:VisualElement class="guide-text">
+          <ui:Label text="✦ YOUR PATH" class="eyebrow" />
+          <ui:Label name="guideTitle" class="guide-title" />
+          <ui:Label name="guideSub" class="guide-sub" />
+        </ui:VisualElement>
+        <ui:Button name="guideBtn" text="Begin ▸" class="btn-primary" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="screen-quest" class="screen quest">
+      <ui:VisualElement class="quest-top">
+        <ui:Button name="qQuit" text="✕ Abandon trial" class="quit" />
+        <ui:VisualElement name="qDots" class="dots" />
+        <ui:Label name="qCombo" text="×1.0" class="combo" />
+      </ui:VisualElement>
+      <ui:VisualElement class="qmeta"><ui:Label name="qMetaSkill" /><ui:Label name="qMetaTier" /></ui:VisualElement>
+      <ui:VisualElement class="qcard">
+        <ui:Label name="qTip" class="tipbox" />
+        <ui:Label name="qPrompt" class="prompt" />
+        <ui:TextField name="qInput" class="answer" />
+        <ui:VisualElement name="qChoices" class="choices" />
+        <ui:Label name="qHintBox" class="hintbox" />
+        <ui:Label name="qFeedback" class="feedback" />
+      </ui:VisualElement>
+      <ui:VisualElement class="quest-actions">
+        <ui:Button name="qHint" text="✧ Hint" class="btn-ghost" />
+        <ui:Button name="qSubmit" text="Cast Answer" class="btn-primary" />
+        <ui:Button name="qNext" text="Continue ▸" class="btn-primary" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="screen-map" class="screen panel">
+      <ui:Label text="The Archipelago" class="h2" /><ui:Label name="mapHint" class="dim" />
+      <ui:ScrollView><ui:VisualElement name="mapGrid" class="grid" /></ui:ScrollView>
+    </ui:VisualElement>
+    <ui:VisualElement name="screen-echo" class="screen panel">
+      <ui:Label text="The Echo Tide" class="h2" /><ui:Label class="dim" text="Twice-learned is truly learned. Echoes return on widening intervals: the better you remember, the longer they roam." />
+      <ui:ScrollView><ui:VisualElement name="echoList" /></ui:ScrollView>
+      <ui:Button name="echoStart" text="Ride the Tide" class="btn-primary" />
+    </ui:VisualElement>
+    <ui:VisualElement name="screen-dex" class="screen panel">
+      <ui:Label text="The Numendex" class="h2" /><ui:Label name="dexSub" class="dim" />
+      <ui:ScrollView><ui:VisualElement name="dexGrid" class="grid" /></ui:ScrollView>
+    </ui:VisualElement>
+    <ui:VisualElement name="screen-medals" class="screen panel">
+      <ui:Label text="Hall of Medals" class="h2" /><ui:Label class="dim" text="Deeds of the Mathfinder, struck in star-metal." />
+      <ui:ScrollView><ui:VisualElement name="medalGrid" class="grid" /></ui:ScrollView>
+    </ui:VisualElement>
+
+    <ui:VisualElement name="modal" class="modal">
+      <ui:VisualElement class="modal-card">
+        <ui:Label name="mEyebrow" class="eyebrow" /><ui:Label name="mTitle" class="h3" /><ui:Label name="mBody" class="mbody" />
+        <ui:VisualElement name="mCustom" /><ui:VisualElement name="mActions" class="row" />
+      </ui:VisualElement>
+    </ui:VisualElement>
+    <ui:VisualElement name="levelfx" class="levelfx">
+      <ui:Label text="LEVEL UP" class="lf-eyebrow" /><ui:Label name="lfNum" text="2" class="lf-num" /><ui:Label name="lfTitle" class="lf-title" />
+      <ui:Button name="lfBtn" text="Shine On ✦" class="btn-primary" />
+    </ui:VisualElement>
+    <ui:VisualElement name="toasts" class="toasts" picking-mode="Ignore" />
+  </ui:VisualElement>
+</ui:UXML>

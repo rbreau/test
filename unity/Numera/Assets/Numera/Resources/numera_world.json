@@ -1,0 +1,744 @@
+{
+  "levelNames": [
+    "Novice of the Shore",
+    "Lantern Bearer",
+    "Tide Counter",
+    "Reef Apprentice",
+    "Chart Reader",
+    "Sign Walker",
+    "Ratio Warden",
+    "Peak Climber",
+    "Letter Hunter",
+    "Grove Surveyor",
+    "Fall Whisperer",
+    "Circle Dancer",
+    "Fog Piercer",
+    "Flux Adept",
+    "Null Challenger",
+    "Grand Mathfinder"
+  ],
+  "tierNames": [
+    "",
+    "Bronze Trial",
+    "Silver Trial",
+    "Gold Trial"
+  ],
+  "leitnerDays": [
+    0,
+    1,
+    3,
+    7,
+    16,
+    35
+  ],
+  "islands": [
+    {
+      "id": "ember",
+      "name": "Ember Shore",
+      "arc": "The Four Tides",
+      "hue": "#f2884e",
+      "lore": "The first lantern-light falls here, where the four tides — joining, taking, folding, sharing — once kept the whole sea in rhythm. The Null silenced them first.",
+      "restored": "The four tides breathe again. Far off, you hear the Null recoil — it did not expect anyone to remember how to count.",
+      "x": 110,
+      "y": 545,
+      "skills": [
+        {
+          "id": "add",
+          "name": "Tide of Joining",
+          "desc": "Addition, from shore-counting to triple swells.",
+          "numenName": "Summling",
+          "numenLore": "Hums two songs into one.",
+          "tips": [
+            "Round, then repair: 297 + 58 → 300 + 58, then give back 3.",
+            "Add left to right: tens first, then ones. 47 + 38 → 70, then 15 → 85."
+          ]
+        },
+        {
+          "id": "sub",
+          "name": "Tide of Taking",
+          "desc": "Subtraction and what the ebb leaves behind.",
+          "numenName": "Minuel",
+          "numenLore": "Keeps what remains when the tide pulls out.",
+          "tips": [
+            "Count up, not down: 83 − 47 → from 47, add 3 to reach 50, then 33 more.",
+            "Round what you subtract: −29 becomes −30, then hand 1 back."
+          ]
+        },
+        {
+          "id": "mul",
+          "name": "Tide of Folding",
+          "desc": "Multiplication — tables, then towers.",
+          "numenName": "Loopwing",
+          "numenLore": "Beats its wings in perfect multiples.",
+          "tips": [
+            "Break a factor apart: 7 × 46 = 7×40 + 7×6.",
+            "×5 is ×10 then half. ×9 is ×10 minus one of them."
+          ]
+        },
+        {
+          "id": "div",
+          "name": "Tide of Sharing",
+          "desc": "Division into fair and perfect piles.",
+          "numenName": "Quotil",
+          "numenLore": "Shares every catch into fair piles.",
+          "tips": [
+            "Divide in steps: ÷6 is ÷2, then ÷3.",
+            "Ask how many whole TENS of the divisor fit first, then finish the rest."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "signs",
+      "name": "Hollow of Signs",
+      "arc": "Below the Zero-Line",
+      "hue": "#8b7cf6",
+      "lore": "A cavern where the sea dips below zero. Lanterns here burn cold, and every number casts a mirrored twin on the dark water.",
+      "restored": "The zero-line steadies. Positive and negative walk the hollow together now, politely, like old rivals who respect each other.",
+      "x": 265,
+      "y": 470,
+      "skills": [
+        {
+          "id": "negadd",
+          "name": "Mirrorwalk",
+          "desc": "Adding and subtracting across zero.",
+          "numenName": "Umbrant",
+          "numenLore": "Walks both sides of zero without falling.",
+          "tips": [
+            "Think temperature: −7 + 10 is warming 10° from −7, landing at 3.",
+            "Subtracting a negative removes a debt — that always makes you richer."
+          ]
+        },
+        {
+          "id": "negmul",
+          "name": "Twin Product",
+          "desc": "Multiplying and dividing signed numbers.",
+          "numenName": "Polarix",
+          "numenLore": "Two wrongs, it insists, make a right.",
+          "tips": [
+            "Count the minus signs: an even count turns positive, odd stays negative.",
+            "Ignore the signs, multiply the sizes, restore the sign at the very end."
+          ]
+        },
+        {
+          "id": "orderops",
+          "name": "Rite of Order",
+          "desc": "Order of operations — the sacred sequence.",
+          "numenName": "Ordinal",
+          "numenLore": "Never does anything out of turn.",
+          "tips": [
+            "Scan before you compute: circle every × and ÷ first; + and − wait their turn.",
+            "Exponents outrank everything except parentheses."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fraction",
+      "name": "Fraction Cove",
+      "arc": "The Divided Waters",
+      "hue": "#45d6b5",
+      "lore": "Every wave here breaks into perfect parts. The cove-folk once traded in halves and fifths the way others trade in shells.",
+      "restored": "The divided waters flow whole again. A fifth of a wave, you now know, is still entirely a wave.",
+      "x": 150,
+      "y": 345,
+      "skills": [
+        {
+          "id": "fracsimp",
+          "name": "Shedding Rite",
+          "desc": "Simplifying and recognizing equivalent fractions.",
+          "numenName": "Simplifin",
+          "numenLore": "Sheds everything it doesn’t need.",
+          "tips": [
+            "Both even? Halve both. One ends in 0 or 5 and so does the other? Try 5.",
+            "Digit-sum trick: if both digit-sums divide by 3, the whole fraction does."
+          ]
+        },
+        {
+          "id": "fracadd",
+          "name": "Common Ground",
+          "desc": "Adding and subtracting fractions.",
+          "numenName": "Commundra",
+          "numenLore": "Finds the ground two rivers share.",
+          "tips": [
+            "Same bottom? Add only the tops — the bottom never adds.",
+            "A quick common bottom is one denominator times the other; simplify after."
+          ]
+        },
+        {
+          "id": "fracmul",
+          "name": "Somersault Rule",
+          "desc": "Multiplying and dividing fractions.",
+          "numenName": "Flipperjack",
+          "numenLore": "Divides by turning somersaults.",
+          "tips": [
+            "Cancel before you multiply: cross-simplify any top with any bottom.",
+            "To divide, flip the second fraction and multiply. Every time, no exceptions."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "delta",
+      "name": "The Glass Delta",
+      "arc": "Point and Percent",
+      "hue": "#6db3f2",
+      "lore": "A river-mouth of glass where numbers refract into tenths and hundredths. Merchants here measure everything — including gratitude — in percent.",
+      "restored": "The delta runs clear. You can read a price tag, a tip, and a trick discount at a glance, which frightens merchants everywhere.",
+      "x": 330,
+      "y": 305,
+      "skills": [
+        {
+          "id": "decops",
+          "name": "Glasswork",
+          "desc": "Decimal arithmetic with a steady hand.",
+          "numenName": "Dotessa",
+          "numenLore": "Carries her point wherever she drifts.",
+          "tips": [
+            "Think in money: 3.4 + 2.8 is $3.40 + $2.80.",
+            "For ×, drop the points, multiply whole numbers, then place the decimals back."
+          ]
+        },
+        {
+          "id": "percent",
+          "name": "Hundredfold Eye",
+          "desc": "Percent of a quantity, part and whole.",
+          "numenName": "Centavo",
+          "numenLore": "Sees every whole as a hundred sparks.",
+          "tips": [
+            "Find 10% by sliding the point left; 5% is half of that, 20% is double.",
+            "p% of n equals n% of p: 8% of 50 = 50% of 8 = 4."
+          ]
+        },
+        {
+          "id": "percchange",
+          "name": "Turning Tide",
+          "desc": "Percent increase, decrease, and change.",
+          "numenName": "Deltoid",
+          "numenLore": "Measures how far the tide has turned.",
+          "tips": [
+            "+20% is one multiply: ×1.2. And −20% is ×0.8.",
+            "Chained changes multiply: +10% then −10% is ×1.1 × 0.9 = ×0.99 — not zero."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ratio",
+      "name": "Ratio Reef",
+      "arc": "The Law of Proportion",
+      "hue": "#f2c14e",
+      "lore": "Coral that grows in strict proportion — three arms of red for every five of gold. Break the ratio and the reef breaks you.",
+      "restored": "The reef rebuilds itself arm by arm, three to five, exactly as the old law says. It hums when you swim past.",
+      "x": 470,
+      "y": 395,
+      "skills": [
+        {
+          "id": "unitrate",
+          "name": "Price of One",
+          "desc": "Unit rates — per one, per hour, per lumin.",
+          "numenName": "Perion",
+          "numenLore": "Asks the price of one, always.",
+          "tips": [
+            "Always price ONE first: total ÷ count, then scale.",
+            "Compare per-one prices, never the sticker prices."
+          ]
+        },
+        {
+          "id": "proportion",
+          "name": "Reef Law",
+          "desc": "Solving proportions.",
+          "numenName": "Analogos",
+          "numenLore": "If this is to that, it already knows the rest.",
+          "tips": [
+            "Cross-multiply: in a/b = c/d, the diagonals a·d and b·c are equal.",
+            "Ask how the known pair scaled; the unknown pair scales identically."
+          ]
+        },
+        {
+          "id": "scale",
+          "name": "Cartography",
+          "desc": "Scale, maps, and similar figures.",
+          "numenName": "Magnifex",
+          "numenLore": "Grows and shrinks but never distorts.",
+          "tips": [
+            "Scale factor = new ÷ old, always in that order.",
+            "Lengths scale by s, areas by s², volumes by s³."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exponent",
+      "name": "Exponent Peaks",
+      "arc": "The Doubling Stairs",
+      "hue": "#e06fb2",
+      "lore": "Mountains that double in height with every step of the climb. The peak-keepers wrote the width of the sea on a grain of sand, in a notation of their own.",
+      "restored": "The doubling stairs stand firm. From the summit you can see numbers too large to say aloud — and now, how to write them small.",
+      "x": 615,
+      "y": 470,
+      "skills": [
+        {
+          "id": "powers",
+          "name": "Staircount",
+          "desc": "Powers, squares, cubes, and roots.",
+          "numenName": "Squarrel",
+          "numenLore": "Stacks its acorns in perfect squares.",
+          "tips": [
+            "Squares near round numbers: 19² = (20−1)² = 400 − 40 + 1.",
+            "Keep anchors in your pocket: 2¹⁰ = 1024, 15² = 225, 25² = 625."
+          ]
+        },
+        {
+          "id": "exponlaws",
+          "name": "Keepers’ Laws",
+          "desc": "The laws of exponents.",
+          "numenName": "Indicium",
+          "numenLore": "Adds journeys by multiplying steps.",
+          "tips": [
+            "Same base multiplied? ADD exponents. A power of a power? MULTIPLY them.",
+            "x⁰ = 1 — a journey of zero steps still stands somewhere."
+          ]
+        },
+        {
+          "id": "scinot",
+          "name": "Grain-Script",
+          "desc": "Scientific notation, vast and vanishing.",
+          "numenName": "Notarion",
+          "numenLore": "Writes the width of the sea on a grain of sand.",
+          "tips": [
+            "Count point-slides, not zeros. Slides left = positive exponent.",
+            "Multiply the fronts, add the exponents; re-slide once if the front reaches 10."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "algebra",
+      "name": "Algebra Vale",
+      "arc": "The Hidden Letter",
+      "hue": "#f26b8a",
+      "lore": "A green valley where one traveler is always missing from every story, known only as x. The vale-folk have hunted the hidden letter for a thousand years.",
+      "restored": "The hidden letter steps out of the mist and bows. It was never hiding, it says — you simply hadn’t balanced the question.",
+      "x": 765,
+      "y": 415,
+      "skills": [
+        {
+          "id": "onestep",
+          "name": "First Unmasking",
+          "desc": "One-step equations.",
+          "numenName": "Xyphling",
+          "numenLore": "Hides in plain sight and waits to be found.",
+          "tips": [
+            "Don’t solve — UNDO. Whatever touches x, do the opposite to both sides.",
+            "Check by feeding the answer back in; it should balance in your head."
+          ]
+        },
+        {
+          "id": "twostep",
+          "name": "The Balancing",
+          "desc": "Two-step and both-sides equations.",
+          "numenName": "Balancioth",
+          "numenLore": "Sleeps only when both pans are level.",
+          "tips": [
+            "Peel in reverse order: undo + and − first, × and ÷ last.",
+            "x on both sides? Subtract the smaller x-term from each side first."
+          ]
+        },
+        {
+          "id": "distribute",
+          "name": "Open Doors",
+          "desc": "Distributing, expanding, combining like terms.",
+          "numenName": "Parenthea",
+          "numenLore": "Opens every door she is handed.",
+          "tips": [
+            "The outside number multiplies EVERY term inside — count the terms.",
+            "(x+a)(x+b): the middle number is a+b, the last is a·b."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "geometry",
+      "name": "Geometry Grove",
+      "arc": "Shape and Measure",
+      "hue": "#7ed67e",
+      "lore": "Trees that grow in perfect polygons; a grove floor tiled without a single gap. The oldest tree is a right triangle, and it is very proud of its longest side.",
+      "restored": "The grove measures itself again — every angle accounted for, every shortcut proven. The old triangle creaks approvingly.",
+      "x": 850,
+      "y": 290,
+      "skills": [
+        {
+          "id": "area",
+          "name": "Tilewright",
+          "desc": "Perimeter, area, and circles.",
+          "numenName": "Tessella",
+          "numenLore": "Tiles the shore without a single gap.",
+          "tips": [
+            "Composite shape? Cut it into rectangles — or subtract the hole.",
+            "A triangle is half its bounding rectangle. That is the whole story of ½bh."
+          ]
+        },
+        {
+          "id": "angles",
+          "name": "Degreecraft",
+          "desc": "Angles in lines, triangles, polygons.",
+          "numenName": "Goniad",
+          "numenLore": "Bows at exactly the right degree.",
+          "tips": [
+            "Anchor to three facts: line 180°, turn 360°, triangle 180°.",
+            "Regular n-gon: each exterior angle is 360/n; the interior is its supplement."
+          ]
+        },
+        {
+          "id": "pythag",
+          "name": "The Long Side",
+          "desc": "The Pythagorean theorem and distance.",
+          "numenName": "Hypotenyx",
+          "numenLore": "Takes the shortcut, and proves it.",
+          "tips": [
+            "Know the families: 3-4-5, 5-12-13, 8-15-17 — and every multiple of them.",
+            "The hypotenuse sits alone: c² = a² + b², never mixed in with a leg."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "func",
+      "name": "Function Falls",
+      "arc": "The Machine of Rules",
+      "hue": "#6df2e0",
+      "lore": "A waterfall that takes what you throw in and returns it transformed — always by the same rule. Feed it a 3, learn its secret.",
+      "restored": "The falls run every rule you ask of them: lines, curves, and two truths crossing. The water applauds, which is unusual for water.",
+      "x": 700,
+      "y": 195,
+      "skills": [
+        {
+          "id": "linear",
+          "name": "Line-Reading",
+          "desc": "Linear functions, slope, evaluation.",
+          "numenName": "Slopern",
+          "numenLore": "Climbs the same rise for every run.",
+          "tips": [
+            "Slope is rise over run: subtract the y’s over the x’s, same order.",
+            "In y = mx + b: b is where you start, m is how you move."
+          ]
+        },
+        {
+          "id": "quadratic",
+          "name": "Arc of Falling",
+          "desc": "Quadratics — factoring and roots.",
+          "numenName": "Parabelle",
+          "numenLore": "Falls, and turns falling into flight.",
+          "tips": [
+            "Factoring x² + bx + c: find two numbers that MULTIPLY to c, ADD to b.",
+            "The vertex hides at x = −b/2a — symmetry gives it away."
+          ]
+        },
+        {
+          "id": "systems",
+          "name": "Two Truths",
+          "desc": "Systems of equations.",
+          "numenName": "Twindle",
+          "numenLore": "Speaks two truths and lives where they cross.",
+          "tips": [
+            "Stack the equations and subtract — one letter should vanish.",
+            "If an equation hands you y alone, substitute it in; don’t fight it."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "trig",
+      "name": "Trig Temple",
+      "arc": "The Circle Dance",
+      "hue": "#f2a25c",
+      "lore": "A ring-temple where monks dance the unit circle at dawn, each step a sixth of π. They measure the world with triangles and modesty.",
+      "restored": "The circle dance turns unbroken, dawn after dawn. You know every step now — and every step’s sine.",
+      "x": 520,
+      "y": 155,
+      "skills": [
+        {
+          "id": "righttri",
+          "name": "Triangle Sight",
+          "desc": "Sine, cosine, tangent in right triangles.",
+          "numenName": "Triquetra",
+          "numenLore": "Sees the whole triangle in one angle.",
+          "tips": [
+            "SOH-CAH-TOA — pick the two sides your angle can actually see.",
+            "Ratios carry no units: a 3-4-5 answer holds at any size."
+          ]
+        },
+        {
+          "id": "unitcircle",
+          "name": "The Round Dance",
+          "desc": "The unit circle, radians, exact values.",
+          "numenName": "Radian",
+          "numenLore": "Dances the circle in steps of π.",
+          "tips": [
+            "The 30-45-60 sines just count up: √1/2, √2/2, √3/2.",
+            "Cosine is the x-shadow, sine the y-shadow, of a point walking the circle."
+          ]
+        },
+        {
+          "id": "trigsolve",
+          "name": "Many Faces",
+          "desc": "Identities and solving trig equations.",
+          "numenName": "Identra",
+          "numenLore": "Wears many faces, all of them equal.",
+          "tips": [
+            "sin² + cos² = 1 turns either ratio into the other.",
+            "One answer per quadrant where the sign fits — sketch the circle first."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chance",
+      "name": "Chance Mire",
+      "arc": "The Fog of Maybe",
+      "hue": "#b78ef2",
+      "lore": "A marsh where nothing is certain and everything is likely. The mire-witches deal cards, roll bones, and are never, ever surprised.",
+      "restored": "The fog thins to exactly the thickness you’d expect, on average. The witches deal you in; you know the odds before the cards land.",
+      "x": 330,
+      "y": 140,
+      "skills": [
+        {
+          "id": "probability",
+          "name": "Bonecasting",
+          "desc": "Probability of events, single and chained.",
+          "numenName": "Fortuna",
+          "numenLore": "Never certain, never surprised.",
+          "tips": [
+            "Probability = wanted ÷ possible. Count both before you divide.",
+            "“And” multiplies; “or” adds (when the events can’t both happen)."
+          ]
+        },
+        {
+          "id": "counting",
+          "name": "Every Way",
+          "desc": "Counting, permutations, combinations.",
+          "numenName": "Permutox",
+          "numenLore": "Knows every way the story could go.",
+          "tips": [
+            "Draw a blank slot per choice, fill in the counts, multiply across.",
+            "Order matters → permutation. Only the group matters → divide the repeats out."
+          ]
+        },
+        {
+          "id": "statistics",
+          "name": "Middle Ground",
+          "desc": "Mean, median, and reading a crowd.",
+          "numenName": "Meridian",
+          "numenLore": "Stands in the middle of every crowd.",
+          "tips": [
+            "The mean is a balance point: total = mean × count. Use that backwards.",
+            "The median needs sorted data — sort first, then take the middle."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "calculus",
+      "name": "Calculus Caldera",
+      "arc": "The Ever-Approaching",
+      "hue": "#f2c14e",
+      "lore": "The volcano at the top of the world, where the Null has made its throne. Here motion itself is studied: the art of the instant, and the sum of infinite whispers.",
+      "restored": "The caldera cools. The Null, unsolved at last, thins into ordinary night sky — and every star above Numera is a Numen, home. You are the Grand Mathfinder.",
+      "x": 745,
+      "y": 70,
+      "skills": [
+        {
+          "id": "limits",
+          "name": "The Approach",
+          "desc": "Limits — arriving without touching.",
+          "numenName": "Asymptoze",
+          "numenLore": "Forever arriving, never quite there.",
+          "tips": [
+            "Try substituting first — most limits simply want the value there.",
+            "Got 0/0? Something cancels. Factor and look for the hole."
+          ]
+        },
+        {
+          "id": "derivative",
+          "name": "Art of the Instant",
+          "desc": "Derivatives and rates of change.",
+          "numenName": "Fluxion",
+          "numenLore": "Feels the world change as it happens.",
+          "tips": [
+            "Power rule chant: bring it down in front, drop the power by one.",
+            "A derivative is a slope — sanity-check its sign against the graph in your head."
+          ]
+        },
+        {
+          "id": "integral",
+          "name": "Infinite Whispers",
+          "desc": "Integrals — gathering the whole.",
+          "numenName": "Summanta",
+          "numenLore": "Gathers infinite whispers into one voice.",
+          "tips": [
+            "Integrate = reverse power rule: raise by one, divide by the new power.",
+            "A definite integral is area — estimate with a rectangle to sanity-check."
+          ]
+        }
+      ]
+    }
+  ],
+  "medals": [
+    {
+      "id": "spark",
+      "glyph": "❖",
+      "name": "First Spark",
+      "desc": "Solve your first problem"
+    },
+    {
+      "id": "ten",
+      "glyph": "✧",
+      "name": "Kindling",
+      "desc": "Solve 10 problems"
+    },
+    {
+      "id": "century",
+      "glyph": "✦",
+      "name": "Century Flame",
+      "desc": "Solve 100 problems"
+    },
+    {
+      "id": "fivehundred",
+      "glyph": "❂",
+      "name": "Beacon",
+      "desc": "Solve 500 problems"
+    },
+    {
+      "id": "perfect",
+      "glyph": "♛",
+      "name": "Flawless",
+      "desc": "Complete a perfect trial"
+    },
+    {
+      "id": "perfect5",
+      "glyph": "♕",
+      "name": "Untouchable",
+      "desc": "5 perfect trials"
+    },
+    {
+      "id": "combo8",
+      "glyph": "⁂",
+      "name": "Chain of Light",
+      "desc": "Reach an 8-combo"
+    },
+    {
+      "id": "combo15",
+      "glyph": "⁑",
+      "name": "Meteor Chain",
+      "desc": "Reach a 15-combo"
+    },
+    {
+      "id": "streak3",
+      "glyph": "✹",
+      "name": "Three Dawns",
+      "desc": "3-day streak"
+    },
+    {
+      "id": "streak7",
+      "glyph": "☀",
+      "name": "Week of Light",
+      "desc": "7-day streak"
+    },
+    {
+      "id": "streak30",
+      "glyph": "❁",
+      "name": "The Unbroken",
+      "desc": "30-day streak"
+    },
+    {
+      "id": "isle1",
+      "glyph": "⛵",
+      "name": "First Landfall",
+      "desc": "Restore an island"
+    },
+    {
+      "id": "isle6",
+      "glyph": "🗺",
+      "name": "Half the Sea",
+      "desc": "Restore 6 islands"
+    },
+    {
+      "id": "isle12",
+      "glyph": "👑",
+      "name": "Grand Mathfinder",
+      "desc": "Restore all 12 islands"
+    },
+    {
+      "id": "numen1",
+      "glyph": "✬",
+      "name": "First Friend",
+      "desc": "A Numen returns to you"
+    },
+    {
+      "id": "numen10",
+      "glyph": "✭",
+      "name": "Lantern Chorus",
+      "desc": "10 Numen gathered"
+    },
+    {
+      "id": "numenall",
+      "glyph": "✮",
+      "name": "The Full Sky",
+      "desc": "All 37 Numen gathered"
+    },
+    {
+      "id": "star1",
+      "glyph": "❋",
+      "name": "Starmaker",
+      "desc": "Raise a Numen to starform"
+    },
+    {
+      "id": "rich",
+      "glyph": "◈",
+      "name": "Lumin-Laden",
+      "desc": "Hold 200 lumins at once"
+    },
+    {
+      "id": "echo10",
+      "glyph": "≈",
+      "name": "Tide Rider",
+      "desc": "Ride the Echo Tide 10 times"
+    },
+    {
+      "id": "lvl10",
+      "glyph": "➊",
+      "name": "Tenth Lantern",
+      "desc": "Reach level 10"
+    },
+    {
+      "id": "lvl25",
+      "glyph": "❶",
+      "name": "High Mathfinder",
+      "desc": "Reach level 25"
+    }
+  ],
+  "shop": [
+    {
+      "id": "hints",
+      "glyph": "✧",
+      "name": "Lens of Insight",
+      "desc": "Five hint-charges, ground from clear quartz.",
+      "cost": 60
+    },
+    {
+      "id": "shield",
+      "glyph": "🛡",
+      "name": "Streak Shield",
+      "desc": "Guards your daily flame through one missed day. (max 2)",
+      "cost": 120
+    },
+    {
+      "id": "boost",
+      "glyph": "☄",
+      "name": "Comet Boost",
+      "desc": "Double XP for your next trial.",
+      "cost": 100
+    }
+  ]
+}

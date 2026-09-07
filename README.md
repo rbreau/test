@@ -107,6 +107,14 @@ The home view is a real-time Three.js scene (r128, vendored under `vendor/`):
   `assets/mathfinder.glb` exists, a real rigged glTF character with Mixamo-style
   idle/walk/celebrate clips swapped in live (see `assets/README.md`).
 
+## Unity client (Path B)
+
+A full Unity 6 / URP client lives in **`unity/Numera/`** — the learning engine ported to C#,
+a store-asset workflow (Synty, Mixamo, Kenney, Quaternius) driven by one Asset Map, URP toon /
+water / sky shaders, UI Toolkit interface, and one-click editor setup. See
+`unity/Numera/README.md`. Content stays shared: `node tools/export-content.js` regenerates
+the JSON the Unity client reads from `game.js`.
+
 ## Files
 
 - `index.html` — page skeleton
