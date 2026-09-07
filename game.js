@@ -495,6 +495,7 @@ function freshState() {
 }
 let S = freshState();
 try { const raw = localStorage.getItem(SAVE_KEY); if (raw) S = Object.assign(freshState(), JSON.parse(raw)); } catch (e) { }
+S.featSeen = S.featSeen || {};
 function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
 function skillState(id) { if (!S.skills[id]) S.skills[id] = { crowns: 0, box: 0, due: 0, attempts: 0, correct: 0 }; return S.skills[id]; }
 
@@ -517,16 +518,41 @@ function updateHUD() {
   const badge = $('#dueBadge');
   badge.hidden = due === 0;
   badge.textContent = due;
+  updateNav();
+}
+/* Progressive disclosure: HUD features appear only once they mean something. */
+const NAV_UNLOCKS = [
+  ['echo', () => Object.keys(SKILLS).some(id => skillState(id).crowns >= 1), '≈ <b>Echo Tide</b> unlocked — your crowned arts will echo back for review.'],
+  ['dex', () => Object.keys(S.numen).length > 0, '✦ <b>Numendex</b> unlocked — your gathered spirits live here.'],
+  ['medals', () => S.medals.length > 0, '❖ <b>Hall of Medals</b> unlocked.'],
+  ['shop', () => S.lumins >= 30 || S.level >= 3, '◈ <b>The Bazaar</b> has anchored offshore — spend your lumins.'],
+];
+function updateNav() {
+  for (const [id, cond, msg] of NAV_UNLOCKS) {
+    const btn = $(`.hud-nav button[data-nav="${id}"]`);
+    if (!btn) continue;
+    const open = cond();
+    btn.hidden = !open;
+    if (open && !S.featSeen[id]) {
+      S.featSeen[id] = 1; save();
+      if (!$('#hud').hidden) toast(msg);
+    }
+  }
 }
 function gainXP(amount) {
   S.xp += amount;
-  while (S.xp >= xpNeed(S.level)) {
-    S.xp -= xpNeed(S.level); S.level++;
-    showModal(`
-      <div class="m-eyebrow">Level Up</div>
-      <h3>Level ${S.level} — ${lvlName(S.level)}</h3>
-      <div class="m-body m-center"><p>The lantern burns brighter. The Null takes a step back.</p></div>`,
-      [{ label: 'Onward', primary: true }]);
+  let leveled = false;
+  while (S.xp >= xpNeed(S.level)) { S.xp -= xpNeed(S.level); S.level++; leveled = true; }
+  if (leveled) {
+    $('#lvlOrb').classList.add('pulse');
+    setTimeout(() => $('#lvlOrb').classList.remove('pulse'), 600);
+    NumeraAvatar.levelUp(S.level, lvlName(S.level), () => {
+      if ($('#screen-map').classList.contains('on')) renderMap();
+    });
+  } else {
+    const w = $('.xpwrap');
+    w.classList.add('pulse');
+    setTimeout(() => w.classList.remove('pulse'), 500);
   }
 }
 function show(id) {
@@ -562,6 +588,24 @@ function showModal(html, actions) {
   });
   $('#modal').hidden = false;
   zone.querySelector('button').focus();
+}
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function spawnSparks(host, n) {
+  if (REDUCED || !host) return;
+  const colors = ['#f2c14e', '#ffe9a8', '#45d6b5', '#ede6d3'];
+  const w = host.clientWidth, h = host.clientHeight;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('i');
+    s.className = 'spark';
+    const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 130;
+    s.style.left = w / 2 + (Math.random() - 0.5) * 60 + 'px';
+    s.style.top = h / 2 + 'px';
+    s.style.background = pick(colors);
+    s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    s.style.setProperty('--dy', Math.sin(ang) * dist - 40 + 'px');
+    host.appendChild(s);
+    setTimeout(() => s.remove(), 850);
+  }
 }
 function toast(html) {
   const t = document.createElement('div');
@@ -621,10 +665,46 @@ function blobPath(cx, cy, seed, r) {
   }
   return d + ' Z';
 }
+/* The guide: always recommend exactly one next step. */
+function computeGuide() {
+  const due = dueSkills();
+  if (due.length) return {
+    desc: `<b>Ride the Echo Tide</b><span class="gd-sub">${due.length} mastered art${due.length > 1 ? 's are' : ' is'} echoing — reviewing now locks ${due.length > 1 ? 'them' : 'it'} deeper into memory.</span>`,
+    label: 'Ride ▸',
+    go: () => { renderEcho(); show('echo'); }
+  };
+  for (let i = 0; i < ISLANDS.length; i++) {
+    if (!isleUnlocked(i) || isleRestored(i)) continue;
+    const sk = ISLANDS[i].skills.find(s => skillState(s.id).crowns < 2);
+    if (!sk) continue;
+    const tier = skillState(sk.id).crowns + 1;
+    return {
+      desc: `<b>${TIER_NAMES[tier]} — ${sk.name}</b><span class="gd-sub">${ISLANDS[i].name} · ${sk.desc}</span>`,
+      label: 'Begin ▸',
+      go: () => { currentIsle = i; startQuest(sk.id, tier); }
+    };
+  }
+  for (let i = 0; i < ISLANDS.length; i++) {
+    const sk = ISLANDS[i].skills.find(s => skillState(s.id).crowns < 3);
+    if (!sk) continue;
+    return {
+      desc: `<b>Gold Trial — ${sk.name}</b><span class="gd-sub">${ISLANDS[i].name} · a third crown will raise ${sk.numen[0]} to starform.</span>`,
+      label: 'Begin ▸',
+      go: () => { currentIsle = i; startQuest(sk.id, 3); }
+    };
+  }
+  return { desc: `<b>The sky is full.</b><span class="gd-sub">Every crown won, every Numen a star. Ride the Echo Tide when it calls — memory is a garden, not a trophy.</span>`, label: 'Wander ▸', go: () => { } };
+}
+let guideGo = null;
 function renderMap() {
   $('#mapGreet').textContent = S.name ? `${S.name}’s Archipelago` : 'The Archipelago';
   const restoredCount = ISLANDS.filter((_, i) => isleRestored(i)).length;
-  $('#mapHint').textContent = restoredCount === 12 ? 'Every isle shines. You are the Grand Mathfinder.' : `${restoredCount} of 12 isles restored · select an isle`;
+  $('#mapHint').textContent = restoredCount === 12 ? 'Every isle shines. You are the Grand Mathfinder.' : `${restoredCount} of 12 isles restored`;
+  const guide = computeGuide();
+  $('#guideDesc').innerHTML = guide.desc;
+  $('#guideBtn').textContent = guide.label;
+  guideGo = guide.go;
+  NumeraAvatar.mount($('#avatarDock'), 110);
   const svg = $('#mapsvg');
   let out = '';
   // sea route between islands
@@ -700,6 +780,12 @@ function renderIsland(i) {
     </div>`;
   }).join('');
   $$('#skillList button[data-skill]').forEach(b => b.addEventListener('click', () => startQuest(b.dataset.skill, +b.dataset.tier)));
+  // spotlight the guided next step, if it lives on this island
+  const rec = isl.skills.find(s => skillState(s.id).crowns < (isleRestored(i) ? 3 : 2));
+  if (rec) {
+    const btn = $(`#skillList button[data-skill="${rec.id}"][data-tier="${skillState(rec.id).crowns + 1}"]`);
+    if (btn && !btn.disabled) btn.classList.add('rec');
+  }
 }
 
 /* ================================================================
@@ -799,8 +885,11 @@ function submitAnswer(mcIdx) {
     gainXP(gain);
     fb.className = 'good';
     fb.innerHTML = `<div class="fb-head">${pick(['Solved.', 'The light returns.', 'Exactly so.', 'The Null flinches.', 'Radiant.'])}</div><div class="gain">+${gain} XP${secs < 10 ? ' · swift-bonus' : ''}${lum ? ` · +${lum} ◈` : ''}${Q.combo >= 3 ? ` · combo ×${(1 + 0.1 * Math.min(Q.combo, 10)).toFixed(1)}` : ''}</div>`;
+    spawnSparks($('#qCard'), Math.min(8 + Q.combo * 2, 22));
   } else {
     Q.combo = 0;
+    const card = $('#qCard');
+    card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
     fb.className = 'bad';
     fb.innerHTML = `<div class="fb-head">Not this time — the answer is ${cur.ansText}.</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
     if (Q.mode === 'quest') Q.items.push({ ...Q.curMeta }); // missed problems come back at the end
@@ -1049,12 +1138,14 @@ function drawStars() {
 addEventListener('resize', drawStars);
 drawStars();
 
+$('#guideBtn').addEventListener('click', () => { if (guideGo) guideGo(); });
+
 $('#beginBtn').addEventListener('click', () => {
   S.name = $('#nameInput').value.trim() || 'Wanderer';
   S.introSeen = true; save();
   $('#hud').hidden = false;
   renderMap(); show('map');
-  toast(`Welcome, <b>${S.name}</b>. Ember Shore awaits.`);
+  toast(`Welcome, <b>${S.name}</b>. Follow <b>Your Path</b> — it always knows the next step.`);
 });
 $('#nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#beginBtn').click(); });
 
@@ -1065,6 +1156,7 @@ if (S.introSeen) {
   if (due) toast(`≈ The <b>Echo Tide</b> carries ${due} echo${due > 1 ? 'es' : ''} today — ride it to keep them bright.`);
 } else {
   show('title');
+  NumeraAvatar.mount($('#avatarTitle'), 190);
   $('#nameInput').focus();
 }
 updateHUD();

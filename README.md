@@ -82,6 +82,7 @@ Every game mechanic maps to an evidence-backed learning principle:
 
 - `index.html` — page skeleton
 - `style.css` — the "starlight cartography" theme
+- `avatar.js` — the 3D Mathfinder avatar (Three.js) and the level-up ceremony
 - `game.js` — world data, 37 problem generators, learning engine, UI
 
 ## Ideas for future expansions
