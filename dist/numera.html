@@ -404,8 +404,6 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
   #guideDesc b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #guideDesc .gd-sub{display:none}
   #guideBtn{padding:9px 14px;font-size:14px;white-space:nowrap;flex:none}
-  #toasts{top:96px;bottom:auto;left:12px;right:12px;align-items:stretch}
-  .toast{max-width:none;font-size:13px}
   .hud-level{min-width:0;flex:1 1 140px}
   .xplabel span{display:none}
   .xplabel b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
@@ -467,13 +465,23 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .lf-title{font-family:var(--font-display);font-size:24px;color:var(--parchment);letter-spacing:.08em;margin:4px 0 22px}
 
 /* ---------------- toasts ---------------- */
-#toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:auto}
+@media (max-width:640px){#toasts{top:96px;bottom:auto;left:12px;right:12px;align-items:stretch}.toast{max-width:none;font-size:13px}}
 .toast{
   background:var(--ink-raised);border:1px solid var(--gold);color:var(--parchment);
   border-radius:10px;padding:10px 16px;font-size:14px;box-shadow:0 4px 20px #00000088;
   animation:rise .25s ease;
 }
 .toast b{color:var(--gold)}
+
+/* ---------------- error banner + lite mode ---------------- */
+#errBanner{position:fixed;left:12px;right:12px;top:12px;z-index:90;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#3a1020;border:1px solid var(--coral);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--parchment);box-shadow:0 8px 30px #00000088}
+#errBanner span{flex:1;min-width:160px;word-break:break-word;font-family:var(--font-mono);font-size:12px}
+#errBanner .btn-primary{padding:8px 12px;font-size:13px}
+#errBanner .btn-ghost{padding:6px 10px}
+.litelink{color:var(--dim);text-transform:none;letter-spacing:0}
+.litelink:hover{color:var(--gold)}
 
 </style>
 
@@ -493,6 +501,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
       <span class="stat lum" title="Lumins — earned from hard problems"><span class="glyph">◈</span> <b id="luminsEl">0</b></span>
       <span class="stat streak" title="Daily streak"><span class="glyph">✹</span> <b id="streakEl">0</b></span>
       <button id="muteBtn" class="mute" title="Sound on" aria-label="Toggle sound">🔊</button>
+      <button id="liteToggle" class="mute" title="Toggle lite mode (list view instead of the 3D isle)" aria-label="Toggle lite mode">⚙</button>
     </div>
     <nav class="hud-nav">
       <button data-nav="home">My Isle</button>
@@ -519,7 +528,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
         <input id="nameInput" maxlength="20" placeholder="Name your Mathfinder…" aria-label="Your name">
         <button class="btn-primary" id="beginBtn">Light the First Lantern</button>
       </div>
-      <p class="title-sub" style="letter-spacing:.1em">Progress is kept on this device</p>
+      <p class="title-sub" style="letter-spacing:.1em">Progress is kept on this device · <a href="#" id="liteLink" class="litelink">trouble starting? begin in lite mode</a></p>
     </section>
 
     <section id="screen-home" class="screen">
@@ -9116,7 +9125,12 @@ window.NumeraIsle = (function () {
       el.style.left = ((v.x * 0.5 + 0.5) * w) + 'px'; el.style.top = ((-v.y * 0.5 + 0.5) * h) + 'px';
     });
   }
-  function loop(t) { if (!running) return; if (!document.hidden) frame(t); requestAnimationFrame(loop); }
+  let fatalCb = null, frameErrors = 0;
+  function loop(t) {
+    if (!running) return;
+    if (!document.hidden) { try { frame(t); frameErrors = 0; } catch (e) { console.error(e); if (++frameErrors > 3) { running = false; if (fatalCb) fatalCb(e); return; } } }
+    requestAnimationFrame(loop);
+  }
   /* ---- gestures: tap = walk there (or approach a beacon), drag = orbit the camera, pinch / wheel = zoom */
   function setPointer(x, y) {
     const r = renderer.domElement.getBoundingClientRect();
@@ -9217,7 +9231,7 @@ window.NumeraIsle = (function () {
   // small debug surface (tests + tuning)
   function worldToScreen(x, z) { if (!renderer) return null; const v = new THREE.Vector3(x, 0, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, behind: v.z > 1 }; }
   function beaconScreenPos(i) { const b = beacons[i]; if (!b || !renderer) return null; const v = b.position.clone(); v.y += 1.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }
-  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
+  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, onFatal(cb) { fatalCb = cb; }, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
 })();
 
 </script>
@@ -9859,6 +9873,20 @@ function showModal(html, actions) {
   zone.querySelector('button').focus();
 }
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Any runtime error becomes a visible banner with the message, plus a way forward (lite mode = list view, no 3D). */
+function showErrorBanner(msg) {
+  let b = $('#errBanner');
+  if (!b) {
+    b = document.createElement('div'); b.id = 'errBanner';
+    b.innerHTML = '<span id="errText"></span><button id="errLite" class="btn-primary">Continue in lite mode</button><button id="errClose" class="btn-ghost">✕</button>';
+    document.body.appendChild(b);
+    $('#errLite').addEventListener('click', () => { S.lite = true; save(); b.remove(); if (S.introSeen) { renderHome(); show('home'); } });
+    $('#errClose').addEventListener('click', () => b.remove());
+  }
+  $('#errText').textContent = 'Something went wrong: ' + msg;
+}
+addEventListener('error', e => showErrorBanner((e.message || 'unknown error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : '')));
+addEventListener('unhandledrejection', e => showErrorBanner(e.reason && e.reason.message ? e.reason.message : String(e.reason)));
 function spawnSparks(host, n) {
   if (REDUCED || !host) return;
   const colors = ['#f2c14e', '#ffe9a8', '#45d6b5', '#ede6d3'];
@@ -10035,7 +10063,11 @@ function renderHome() {
   $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
   const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
   if (window.NumeraIsle && NumeraIsle.setCompanions) NumeraIsle.setCompanions(Object.keys(S.numen).length, Object.values(S.numen).filter(v => v === 2).length);
-  const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
+  let ok = false;
+  if (!S.lite && window.NumeraIsle) {
+    try { ok = NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill); }
+    catch (e) { console.error(e); ok = false; showErrorBanner((e && e.message) || 'the 3D isle failed to start'); }
+  }
   $('#isle3dWrap').classList.toggle('flat', !ok);
   if (ok && !S.featSeen.controls) { S.featSeen.controls = 1; save(); toast('<b>Tap</b> to walk · <b>drag</b> to look around · <b>pinch</b> to zoom · tap a <b>sigil</b> for its trials', 9000); }
   $('#skillList').hidden = !!ok;
@@ -10459,13 +10491,17 @@ $('#muteBtn').addEventListener('click', () => { S.mute = !S.mute; save(); render
 renderMute();
 $('#setSail').addEventListener('click', () => { renderMap(); show('map'); });
 
-$('#beginBtn').addEventListener('click', () => {
+function begin(lite) {
   S.name = $('#nameInput').value.trim() || 'Wanderer';
-  S.introSeen = true; save();
+  S.introSeen = true; if (lite) S.lite = true; save();
   $('#hud').hidden = false;
-  openIsland(frontierIsle());
+  try { openIsland(frontierIsle()); }
+  catch (e) { console.error(e); showErrorBanner((e && e.message) || 'could not open the isle'); S.lite = true; save(); try { renderHome(); } catch (e2) { } show('home'); }
   toast(`Welcome, <b>${S.name}</b>. Follow <b>Your Path</b> — it always knows the next step.`);
-});
+}
+$('#beginBtn').addEventListener('click', () => begin(false));
+$('#liteLink').addEventListener('click', e => { e.preventDefault(); begin(true); });
+$('#liteToggle').addEventListener('click', () => { S.lite = !S.lite; save(); toast(S.lite ? 'Lite mode on — list view instead of the 3D isle.' : 'Lite mode off — the 3D isle returns.'); if ($('#screen-home').classList.contains('on')) renderHome(); });
 $('#nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#beginBtn').click(); });
 
 if (S.introSeen) {
@@ -10479,6 +10515,7 @@ if (S.introSeen) {
   NumeraAvatar.mount($('#avatarTitle'), 190);
   $('#nameInput').focus();
 }
+if (window.NumeraIsle && NumeraIsle.onFatal) NumeraIsle.onFatal(e => { showErrorBanner((e && e.message) || 'the 3D isle stopped'); S.lite = true; save(); if ($('#screen-home').classList.contains('on')) renderHome(); });
 updateHUD();
 
 </script>

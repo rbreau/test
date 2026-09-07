@@ -610,7 +610,12 @@ window.NumeraIsle = (function () {
       el.style.left = ((v.x * 0.5 + 0.5) * w) + 'px'; el.style.top = ((-v.y * 0.5 + 0.5) * h) + 'px';
     });
   }
-  function loop(t) { if (!running) return; if (!document.hidden) frame(t); requestAnimationFrame(loop); }
+  let fatalCb = null, frameErrors = 0;
+  function loop(t) {
+    if (!running) return;
+    if (!document.hidden) { try { frame(t); frameErrors = 0; } catch (e) { console.error(e); if (++frameErrors > 3) { running = false; if (fatalCb) fatalCb(e); return; } } }
+    requestAnimationFrame(loop);
+  }
   /* ---- gestures: tap = walk there (or approach a beacon), drag = orbit the camera, pinch / wheel = zoom */
   function setPointer(x, y) {
     const r = renderer.domElement.getBoundingClientRect();
@@ -711,5 +716,5 @@ window.NumeraIsle = (function () {
   // small debug surface (tests + tuning)
   function worldToScreen(x, z) { if (!renderer) return null; const v = new THREE.Vector3(x, 0, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, behind: v.z > 1 }; }
   function beaconScreenPos(i) { const b = beacons[i]; if (!b || !renderer) return null; const v = b.position.clone(); v.y += 1.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }
-  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
+  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, onFatal(cb) { fatalCb = cb; }, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
 })();

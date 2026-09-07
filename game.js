@@ -635,6 +635,20 @@ function showModal(html, actions) {
   zone.querySelector('button').focus();
 }
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* Any runtime error becomes a visible banner with the message, plus a way forward (lite mode = list view, no 3D). */
+function showErrorBanner(msg) {
+  let b = $('#errBanner');
+  if (!b) {
+    b = document.createElement('div'); b.id = 'errBanner';
+    b.innerHTML = '<span id="errText"></span><button id="errLite" class="btn-primary">Continue in lite mode</button><button id="errClose" class="btn-ghost">✕</button>';
+    document.body.appendChild(b);
+    $('#errLite').addEventListener('click', () => { S.lite = true; save(); b.remove(); if (S.introSeen) { renderHome(); show('home'); } });
+    $('#errClose').addEventListener('click', () => b.remove());
+  }
+  $('#errText').textContent = 'Something went wrong: ' + msg;
+}
+addEventListener('error', e => showErrorBanner((e.message || 'unknown error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : '')));
+addEventListener('unhandledrejection', e => showErrorBanner(e.reason && e.reason.message ? e.reason.message : String(e.reason)));
 function spawnSparks(host, n) {
   if (REDUCED || !host) return;
   const colors = ['#f2c14e', '#ffe9a8', '#45d6b5', '#ede6d3'];
@@ -811,7 +825,11 @@ function renderHome() {
   $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
   const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
   if (window.NumeraIsle && NumeraIsle.setCompanions) NumeraIsle.setCompanions(Object.keys(S.numen).length, Object.values(S.numen).filter(v => v === 2).length);
-  const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
+  let ok = false;
+  if (!S.lite && window.NumeraIsle) {
+    try { ok = NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill); }
+    catch (e) { console.error(e); ok = false; showErrorBanner((e && e.message) || 'the 3D isle failed to start'); }
+  }
   $('#isle3dWrap').classList.toggle('flat', !ok);
   if (ok && !S.featSeen.controls) { S.featSeen.controls = 1; save(); toast('<b>Tap</b> to walk · <b>drag</b> to look around · <b>pinch</b> to zoom · tap a <b>sigil</b> for its trials', 9000); }
   $('#skillList').hidden = !!ok;
@@ -1235,13 +1253,17 @@ $('#muteBtn').addEventListener('click', () => { S.mute = !S.mute; save(); render
 renderMute();
 $('#setSail').addEventListener('click', () => { renderMap(); show('map'); });
 
-$('#beginBtn').addEventListener('click', () => {
+function begin(lite) {
   S.name = $('#nameInput').value.trim() || 'Wanderer';
-  S.introSeen = true; save();
+  S.introSeen = true; if (lite) S.lite = true; save();
   $('#hud').hidden = false;
-  openIsland(frontierIsle());
+  try { openIsland(frontierIsle()); }
+  catch (e) { console.error(e); showErrorBanner((e && e.message) || 'could not open the isle'); S.lite = true; save(); try { renderHome(); } catch (e2) { } show('home'); }
   toast(`Welcome, <b>${S.name}</b>. Follow <b>Your Path</b> — it always knows the next step.`);
-});
+}
+$('#beginBtn').addEventListener('click', () => begin(false));
+$('#liteLink').addEventListener('click', e => { e.preventDefault(); begin(true); });
+$('#liteToggle').addEventListener('click', () => { S.lite = !S.lite; save(); toast(S.lite ? 'Lite mode on — list view instead of the 3D isle.' : 'Lite mode off — the 3D isle returns.'); if ($('#screen-home').classList.contains('on')) renderHome(); });
 $('#nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('#beginBtn').click(); });
 
 if (S.introSeen) {
@@ -1255,4 +1277,5 @@ if (S.introSeen) {
   NumeraAvatar.mount($('#avatarTitle'), 190);
   $('#nameInput').focus();
 }
+if (window.NumeraIsle && NumeraIsle.onFatal) NumeraIsle.onFatal(e => { showErrorBanner((e && e.message) || 'the 3D isle stopped'); S.lite = true; save(); if ($('#screen-home').classList.contains('on')) renderHome(); });
 updateHUD();

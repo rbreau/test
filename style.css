@@ -401,8 +401,6 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
   #guideDesc b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #guideDesc .gd-sub{display:none}
   #guideBtn{padding:9px 14px;font-size:14px;white-space:nowrap;flex:none}
-  #toasts{top:96px;bottom:auto;left:12px;right:12px;align-items:stretch}
-  .toast{max-width:none;font-size:13px}
   .hud-level{min-width:0;flex:1 1 140px}
   .xplabel span{display:none}
   .xplabel b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
@@ -464,10 +462,20 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .lf-title{font-family:var(--font-display);font-size:24px;color:var(--parchment);letter-spacing:.08em;margin:4px 0 22px}
 
 /* ---------------- toasts ---------------- */
-#toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:8px}
+#toasts{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{pointer-events:auto}
+@media (max-width:640px){#toasts{top:96px;bottom:auto;left:12px;right:12px;align-items:stretch}.toast{max-width:none;font-size:13px}}
 .toast{
   background:var(--ink-raised);border:1px solid var(--gold);color:var(--parchment);
   border-radius:10px;padding:10px 16px;font-size:14px;box-shadow:0 4px 20px #00000088;
   animation:rise .25s ease;
 }
 .toast b{color:var(--gold)}
+
+/* ---------------- error banner + lite mode ---------------- */
+#errBanner{position:fixed;left:12px;right:12px;top:12px;z-index:90;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#3a1020;border:1px solid var(--coral);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--parchment);box-shadow:0 8px 30px #00000088}
+#errBanner span{flex:1;min-width:160px;word-break:break-word;font-family:var(--font-mono);font-size:12px}
+#errBanner .btn-primary{padding:8px 12px;font-size:13px}
+#errBanner .btn-ghost{padding:6px 10px}
+.litelink{color:var(--dim);text-transform:none;letter-spacing:0}
+.litelink:hover{color:var(--gold)}
