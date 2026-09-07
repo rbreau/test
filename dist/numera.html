@@ -65,6 +65,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .stat b{color:var(--parchment);font-variant-numeric:tabular-nums}
 .stat.lum .glyph{color:var(--gold)}
 .stat.streak .glyph{color:var(--coral)}
+.mute{background:transparent;border:1px solid var(--ink-line);border-radius:9px;padding:4px 8px;font-size:14px;line-height:1}
+.mute:hover,.mute:focus-visible{border-color:var(--gold);outline:none}
 .hud-nav{display:flex;gap:8px;flex-wrap:wrap}
 .hud-nav button{
   position:relative;background:transparent;color:var(--dim);
@@ -369,7 +371,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 #ioName{font-size:24px;letter-spacing:.04em;line-height:1.1}
 #ioCrowns{color:var(--dim);font-size:12.5px;font-family:var(--font-mono);margin-top:2px}
 .io-hint{color:#93a5c4aa;font-size:11px;margin-top:6px;letter-spacing:.02em}
-#isle3d canvas{touch-action:none;cursor:crosshair}
+#isle3d canvas{touch-action:none;cursor:grab}
+#isle3d canvas:active{cursor:grabbing}
 #setSail{position:absolute;top:14px;right:14px;z-index:3;background:#0a0e23b8;backdrop-filter:blur(8px);color:var(--parchment)}
 #isleLabels{position:absolute;inset:0;z-index:2;pointer-events:none}
 .isleLabel{
@@ -472,6 +475,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
     <div class="hud-stats">
       <span class="stat lum" title="Lumins — earned from hard problems"><span class="glyph">◈</span> <b id="luminsEl">0</b></span>
       <span class="stat streak" title="Daily streak"><span class="glyph">✹</span> <b id="streakEl">0</b></span>
+      <button id="muteBtn" class="mute" title="Sound on" aria-label="Toggle sound">🔊</button>
     </div>
     <nav class="hud-nav">
       <button data-nav="home">My Isle</button>
@@ -509,7 +513,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
           <div class="io-arc" id="ioArc"></div>
           <h2 id="ioName"></h2>
           <div class="io-crowns" id="ioCrowns"></div>
-          <div class="io-hint">tap the ground to walk · hold to steer · tap a sigil to face its trials</div>
+          <div class="io-hint">tap to walk · drag to look around · pinch to zoom · tap a sigil for its trials</div>
         </div>
         <button class="btn-ghost" id="setSail">🧭 World Map</button>
         <div id="guideCard">
@@ -8266,6 +8270,226 @@ window.NumeraAssets = (function () {
 <script>
 'use strict';
 /* ================================================================
+   NUMERA — living-world effects
+   Footstep dust, beacon sparkles, Numen companions orbiting the
+   player, butterflies over the flowers, a flock of birds by day,
+   shooting stars by night. All cheap: pooled points and a handful
+   of tiny meshes. Created per island by island3d.js.
+   ================================================================ */
+window.NumeraFX = (function () {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* A pool of soft particles with per-particle life, drawn as one Points object. */
+  class PointPool {
+    constructor(scene, n, color, size, opts) {
+      opts = opts || {};
+      this.n = n; this.p = []; for (let i = 0; i < n; i++) this.p.push({ a: false, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, life: 0, span: 1, g: opts.gravity || 0 });
+      this.pos = new Float32Array(n * 3); this.life = new Float32Array(n).fill(2);
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+      geo.setAttribute('aLife', new THREE.BufferAttribute(this.life, 1));
+      this.mat = new THREE.ShaderMaterial({
+        transparent: true, depthWrite: false, blending: opts.additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+        uniforms: { uColor: { value: new THREE.Color(color) }, uSize: { value: size }, uGrow: { value: opts.grow === undefined ? 1.6 : opts.grow } },
+        vertexShader: `attribute float aLife; uniform float uSize; uniform float uGrow; varying float vA;
+          void main(){ vA = aLife > 1.0 ? 0.0 : (1.0 - aLife) * smoothstep(0.0, 0.08, aLife);
+            vec4 mv = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = uSize * (1.0 + aLife * uGrow) * (34.0 / max(-mv.z, 1.0)); gl_Position = projectionMatrix * mv; }`,
+        fragmentShader: `uniform vec3 uColor; varying float vA;
+          void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.12, d) * vA; if (a < 0.01) discard; gl_FragColor = vec4(uColor, a); }`,
+      });
+      this.points = new THREE.Points(geo, this.mat); this.points.frustumCulled = false; scene.add(this.points);
+    }
+    spawn(x, y, z, vx, vy, vz, span) {
+      const q = this.p.find(o => !o.a) || this.p[0];
+      Object.assign(q, { a: true, x, y, z, vx, vy, vz, life: 0, span: span || 1 });
+    }
+    update(dt) {
+      for (let i = 0; i < this.n; i++) {
+        const q = this.p[i];
+        if (q.a) { q.life += dt / q.span; if (q.life >= 1) q.a = false; else { q.vy -= q.g * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.z += q.vz * dt; } }
+        this.pos[i * 3] = q.x; this.pos[i * 3 + 1] = q.y; this.pos[i * 3 + 2] = q.z; this.life[i] = q.a ? q.life : 2;
+      }
+      this.points.geometry.attributes.position.needsUpdate = true; this.points.geometry.attributes.aLife.needsUpdate = true;
+    }
+  }
+
+  function create(scene, cfg) {
+    const hue = cfg.hue, beacons = cfg.beacons || [], isleR = cfg.isleR || 9;
+    const fx = {};
+
+    // ---- footstep dust (spawned by island3d on each stride)
+    const puffs = new PointPool(scene, 48, 0xf1ead6, 9, { grow: 2.2 });
+    fx.step = (pos, heading) => { for (let i = 0; i < 3; i++) puffs.spawn(pos.x + (Math.random() - 0.5) * 0.25, 0.05, pos.z + (Math.random() - 0.5) * 0.25, (Math.random() - 0.5) * 0.5 - Math.sin(heading) * 0.3, 0.35 + Math.random() * 0.25, (Math.random() - 0.5) * 0.5 - Math.cos(heading) * 0.3, 0.6 + Math.random() * 0.3); };
+
+    // ---- beacon sparkles: motes rising from each disc toward its gem
+    const sparkles = beacons.map(b => ({ b, pool: new PointPool(scene, 22, b.userData.gem.material.color.getHex(), 5, { additive: true, grow: 0.3 }), acc: 0 }));
+
+    // ---- companions: caught Numen orbit the player as glowing orbs
+    const orbGroup = new THREE.Group(); scene.add(orbGroup); let orbs = [];
+    fx.setCompanions = (count, stars) => {
+      orbs.forEach(o => orbGroup.remove(o.m)); orbs = [];
+      const n = Math.min(6, count);
+      for (let i = 0; i < n; i++) {
+        const star = i < stars;
+        const m = new THREE.Mesh(new THREE.SphereGeometry(star ? 0.085 : 0.065, 12, 10), new THREE.MeshBasicMaterial({ color: star ? 0xf2c14e : 0x45d6b5 }));
+        const halo = new THREE.Mesh(new THREE.SphereGeometry(star ? 0.16 : 0.12, 12, 10), new THREE.MeshBasicMaterial({ color: star ? 0xf2c14e : 0x45d6b5, transparent: true, opacity: 0.22, depthWrite: false }));
+        m.add(halo); orbGroup.add(m);
+        orbs.push({ m, phase: i / n * Math.PI * 2, r: 0.55 + (i % 3) * 0.18, h: 1.25 + (i % 2) * 0.25, w: 0.9 + (i % 3) * 0.2 });
+      }
+    };
+
+    // ---- butterflies over the meadow
+    const flies = [];
+    const nFly = reduced ? 0 : 7;
+    for (let i = 0; i < nFly; i++) {
+      const g = new THREE.Group();
+      const col = [0xf2c14e, 0xf26b8a, 0x8b7cf6, 0x45d6b5, 0xffffff][i % 5];
+      const wm = new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide });
+      const wl = new THREE.Mesh(new THREE.PlaneGeometry(0.11, 0.09), wm), wr = wl.clone();
+      wl.position.x = -0.055; wr.position.x = 0.055; g.add(wl, wr);
+      const a = Math.random() * Math.PI * 2, r = 2.4 + Math.random() * 2.2;
+      g.userData = { cx: Math.cos(a) * r, cz: Math.sin(a) * r, ph: Math.random() * 10, w: 0.5 + Math.random() * 0.4, wl, wr };
+      scene.add(g); flies.push(g);
+    }
+
+    // ---- birds: a small flock circling high, daytime only
+    const birds = [];
+    const nBird = reduced ? 0 : 5;
+    const birdMat = new THREE.MeshBasicMaterial({ color: 0x2a3050, transparent: true, opacity: 0.8 });
+    for (let i = 0; i < nBird; i++) {
+      const g = new THREE.Group();
+      const l = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.1), birdMat), r = l.clone();
+      l.position.x = -0.2; r.position.x = 0.2; g.add(l, r);
+      g.userData = { ph: i * 1.3, l, r, rad: 13 + i * 1.1, h: 9.5 + i * 0.6 };
+      scene.add(g); birds.push(g);
+    }
+
+    // ---- shooting stars at night
+    const streaks = [];
+    for (let i = 0; i < 2; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 4.5), new THREE.MeshBasicMaterial({ color: 0xfff6dc, transparent: true, opacity: 0, fog: false }));
+      m.visible = false; scene.add(m); streaks.push({ m, t: -1, from: new THREE.Vector3(), to: new THREE.Vector3() });
+    }
+    let nextStreak = 4 + Math.random() * 8;
+
+    fx.update = ctx => {
+      const { t, dt, player, L } = ctx;
+      puffs.update(dt);
+      sparkles.forEach(s => { s.acc += dt * 5; while (s.acc >= 1) { s.acc -= 1; const a = Math.random() * Math.PI * 2, r = Math.random() * 0.4; s.pool.spawn(s.b.position.x + Math.cos(a) * r, 0.2, s.b.position.z + Math.sin(a) * r, 0, 0.7 + Math.random() * 0.5, 0, 1.6 + Math.random() * 0.8); } s.pool.update(dt); });
+      orbs.forEach(o => {
+        const want = new THREE.Vector3(player.x + Math.cos(t * o.w + o.phase) * o.r, o.h + Math.sin(t * 1.7 + o.phase) * 0.12, player.z + Math.sin(t * o.w + o.phase) * o.r);
+        o.m.position.lerp(want, 0.08);
+      });
+      flies.forEach(g => {
+        const u = g.userData, tt = t * u.w + u.ph;
+        g.position.set(u.cx + Math.sin(tt) * 0.9, 0.45 + Math.sin(tt * 2.3) * 0.25 + 0.2, u.cz + Math.sin(tt * 2) * 0.45);
+        g.rotation.y = Math.atan2(Math.cos(tt) * 0.9, Math.cos(tt * 2) * 0.9);
+        const flap = Math.sin(t * 22 + u.ph) * 0.9; u.wl.rotation.y = flap; u.wr.rotation.y = -flap;
+        g.visible = L.day > 0.15;
+      });
+      birdMat.opacity = 0.8 * L.day;
+      birds.forEach(g => {
+        const u = g.userData, a = t * 0.16 + u.ph;
+        g.position.set(Math.cos(a) * u.rad, u.h + Math.sin(t * 0.7 + u.ph) * 0.5, -6 + Math.sin(a) * u.rad * 0.6);
+        g.rotation.y = -a + Math.PI / 2;
+        const flap = Math.sin(t * 6 + u.ph) * 0.6; u.l.rotation.z = flap; u.r.rotation.z = -flap;
+        g.visible = L.day > 0.05;
+      });
+      if (L.night > 0.5 && !reduced) {
+        nextStreak -= dt;
+        if (nextStreak <= 0) {
+          nextStreak = 5 + Math.random() * 10;
+          const s = streaks.find(x => x.t < 0); if (s) { const a = Math.random() * Math.PI * 2; s.from.set(Math.cos(a) * 60, 40 + Math.random() * 20, Math.sin(a) * 60 - 30); s.to.copy(s.from).add(new THREE.Vector3(-25 - Math.random() * 15, -14, 6)); s.t = 0; s.m.visible = true; s.m.lookAt(s.to); }
+        }
+      }
+      streaks.forEach(s => { if (s.t < 0) return; s.t += dt / 1.1; if (s.t >= 1) { s.t = -1; s.m.visible = false; return; } s.m.position.lerpVectors(s.from, s.to, s.t); s.m.lookAt(s.to); s.m.material.opacity = Math.sin(s.t * Math.PI) * 0.9; });
+    };
+    return fx;
+  }
+  return { create };
+})();
+
+</script>
+<script>
+'use strict';
+/* ================================================================
+   NUMERA — synthesized soundscape (Web Audio, no files)
+   Ambient wind and waves that follow the time of day, footsteps,
+   tap chimes, answer feedback, a level-up fanfare, and a soft hum
+   that rises as you approach a beacon. Starts on the first gesture.
+   ================================================================ */
+window.NumeraAudio = (function () {
+  let ctx = null, master = null, muted = false, wind = null, waves = null, hum = null, humGain = null, started = false;
+  const now = () => ctx.currentTime;
+
+  function noiseBuffer(seconds) {
+    const len = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+    let last = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } // brown-ish noise
+    return buf;
+  }
+  function ensure() {
+    if (ctx) return true;
+    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return false; }
+    master = ctx.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ctx.destination);
+    // wind: brown noise → lowpass, slow LFO on gain
+    const nb = noiseBuffer(3);
+    const src = ctx.createBufferSource(); src.buffer = nb; src.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 380; lp.Q.value = 0.7;
+    wind = ctx.createGain(); wind.gain.value = 0.05;
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.11; const lfoG = ctx.createGain(); lfoG.gain.value = 0.03; lfo.connect(lfoG); lfoG.connect(wind.gain);
+    src.connect(lp); lp.connect(wind); wind.connect(master); src.start(); lfo.start();
+    // waves: same noise → bandpass with a slow swell
+    const src2 = ctx.createBufferSource(); src2.buffer = nb; src2.loop = true; src2.playbackRate.value = 0.7;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 220; bp.Q.value = 1.2;
+    waves = ctx.createGain(); waves.gain.value = 0.04;
+    const lfo2 = ctx.createOscillator(); lfo2.frequency.value = 0.08; const lfo2G = ctx.createGain(); lfo2G.gain.value = 0.035; lfo2.connect(lfo2G); lfo2G.connect(waves.gain);
+    src2.connect(bp); bp.connect(waves); waves.connect(master); src2.start(); lfo2.start();
+    // beacon hum
+    hum = ctx.createOscillator(); hum.type = 'sine'; hum.frequency.value = 110;
+    const hum2 = ctx.createOscillator(); hum2.type = 'sine'; hum2.frequency.value = 165.2;
+    humGain = ctx.createGain(); humGain.gain.value = 0;
+    hum.connect(humGain); hum2.connect(humGain); humGain.connect(master); hum.start(); hum2.start();
+    started = true;
+    return true;
+  }
+  function unlock() { if (ensure() && ctx.state === 'suspended') ctx.resume(); }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, unlock, { passive: true }));
+
+  function tone(freq, dur, type, gain, when, slideTo) {
+    if (!ctx || muted) return;
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type || 'sine'; o.frequency.value = freq;
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, now() + when + dur);
+    g.gain.setValueAtTime(0.0001, now() + when); g.gain.exponentialRampToValueAtTime(gain, now() + when + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, now() + when + dur);
+    o.connect(g); g.connect(master); o.start(now() + when); o.stop(now() + when + dur + 0.05);
+  }
+  function burst(dur, freq, gain) {
+    if (!ctx || muted) return;
+    const src = ctx.createBufferSource(); src.buffer = noiseBuffer(0.2);
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 0.9;
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain, now()); g.gain.exponentialRampToValueAtTime(0.0001, now() + dur);
+    src.connect(f); f.connect(g); g.connect(master); src.start(); src.stop(now() + dur + 0.02);
+  }
+
+  return {
+    get muted() { return muted; },
+    setMuted(m) { muted = m; if (master) master.gain.setTargetAtTime(m ? 0 : 0.9, ctx.currentTime, 0.05); },
+    setDaylight(day) { if (!ctx) return; wind.gain.setTargetAtTime(0.035 + 0.03 * (1 - day), now(), 0.5); waves.gain.setTargetAtTime(0.03 + 0.02 * day, now(), 0.5); },
+    beaconProximity(v) { if (!ctx) return; humGain.gain.setTargetAtTime(muted ? 0 : Math.max(0, Math.min(1, v)) * 0.035, now(), 0.15); },
+    step() { burst(0.07, 700 + Math.random() * 300, 0.18); },
+    tap() { tone(880, 0.14, 'sine', 0.12, 0, 1320); },
+    correct(combo) { tone(659, 0.16, 'triangle', 0.16, 0); tone(784, 0.22, 'triangle', 0.16, 0.09); if (combo >= 5) tone(1046, 0.3, 'triangle', 0.14, 0.18); },
+    wrong() { tone(196, 0.28, 'sine', 0.14, 0, 130); },
+    starfall() { [1568, 1976, 2637].forEach((f, i) => tone(f, 0.25, 'sine', 0.08, i * 0.06)); },
+    levelUp() { [523, 659, 784, 1046, 1318].forEach((f, i) => { tone(f, 0.5, 'triangle', 0.16, i * 0.11); tone(f * 2, 0.35, 'sine', 0.05, i * 0.11); }); },
+    catchNumen() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.4, 'sine', 0.12, i * 0.13)); },
+  };
+})();
+
+</script>
+<script>
+'use strict';
+/* ================================================================
    NUMERA — the living isle (Three.js r128 + post-processing)
    Home view: your Mathfinder walks a stylized island under a live
    sky. Rendering: shadow maps, ACES tone mapping, sRGB output via a
@@ -8285,7 +8509,10 @@ window.NumeraIsle = (function () {
   let grassU = { value: 0 }, pollen = null, fireflies = null, nightLights = [], anims = [], curIsle = null, curSkills = [], curIsleIndex = 0;
   let walk = { target: null, pauseUntil: 0, speed: 0 };
   let ray = null, ptr = null, lastT = 0;
-  let landmarkZone = null, tapMarker = null, markerT = -1, ptrDown = false, lastSteer = 0, mountCount = 0;
+  let landmarkZone = null, tapMarker = null, markerT = -1, mountCount = 0, fx = null, companions = { count: 0, stars: 0 };
+  const cam = { yaw: 0, pitch: 0.5, dist: 6.6, zoomed: false, punchT: -1 };
+  const pointers = new Map(); let gesture = { type: 'none' }, strideAcc = 0, lastPlayerPos = null;
+  const grassPlayer = { value: new THREE.Vector3(0, 0, 99) };
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const qs = new URLSearchParams(location.search), hourParam = qs.get('hour');
   const DBG = { nossao: qs.has('nossao'), nobloom: qs.has('nobloom'), nopost: qs.has('nopost') };
@@ -8327,7 +8554,9 @@ window.NumeraIsle = (function () {
     renderer.domElement.style.touchAction = 'none';
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => renderer.domElement.addEventListener(ev, () => { ptrDown = false; }));
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onPointerUp);
+    renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
     addEventListener('resize', resize);
   }
   function buildComposer(w, h) {
@@ -8505,8 +8734,8 @@ window.NumeraIsle = (function () {
   }
   function swayMaterial(base) {
     base.onBeforeCompile = sh => {
-      sh.uniforms.uTime = grassU;
-      sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      sh.uniforms.uTime = grassU; sh.uniforms.uPlayer = grassPlayer;
+      sh.vertexShader = 'uniform float uTime; uniform vec3 uPlayer;\n' + sh.vertexShader.replace('#include <begin_vertex>',
         `vec3 transformed = vec3(position);
          float wgt = clamp(position.y / 0.34, 0.0, 1.0);
          #ifdef USE_INSTANCING
@@ -8515,7 +8744,12 @@ window.NumeraIsle = (function () {
            float ph = 0.0;
          #endif
          float sw = sin(uTime * 1.7 + ph) * 0.09 * wgt + sin(uTime * 3.1 + ph * 2.0) * 0.02 * wgt;
-         transformed.x += sw; transformed.z += sw * 0.5;`);
+         transformed.x += sw; transformed.z += sw * 0.5;
+         #ifdef USE_INSTANCING
+           vec2 away = instanceMatrix[3].xz - uPlayer.xz; float pd = length(away);
+           float push = smoothstep(0.85, 0.0, pd) * 0.42 * wgt;
+           transformed.xz += (pd > 0.001 ? normalize(away) : vec2(0.0)) * push; transformed.y -= push * 0.35;
+         #endif`);
     };
     return base;
   }
@@ -8781,6 +9015,9 @@ window.NumeraIsle = (function () {
     fireflies = particles(mobile ? 50 : 110, 0xf2c14e, 3.6, true);
 
     placeCharacter();
+    fx = window.NumeraFX ? NumeraFX.create(scene, { hue, beacons, isleR: ISLE_R }) : null;
+    if (fx) fx.setCompanions(companions.count, companions.stars);
+    strideAcc = 0; lastPlayerPos = null;
     applyDaylight(0);
   }
   function placeCharacter() {
@@ -8833,13 +9070,23 @@ window.NumeraIsle = (function () {
           }
         } else { walk.speed = Math.max(0, walk.speed - 3 * dt); if (t > walk.pauseUntil) walk.target = pickTarget(); }
         const p = rig.g.position;
-        const back = camera.aspect < 1 ? 8.2 : 6.6, up = camera.aspect < 1 ? 4.4 : 3.7;
-        camera.position.lerp(new THREE.Vector3(p.x, up, p.z + back), 0.035);
-        camera.lookAt(p.x, 1.1, p.z - 2.2);
+        // orbit camera: user-controlled yaw / pitch / distance, with a punch-in on beacon arrival
+        let punch = 0; if (cam.punchT >= 0) { const q = (t - cam.punchT) / 1600; if (q >= 1) cam.punchT = -1; else punch = Math.sin(q * Math.PI) * 0.22; }
+        const d = cam.dist * (1 - punch), cp = Math.cos(cam.pitch);
+        const want = new THREE.Vector3(p.x + Math.sin(cam.yaw) * cp * d, p.y + Math.sin(cam.pitch) * d, p.z + Math.cos(cam.yaw) * cp * d);
+        camera.position.lerp(want, gesture.type === 'orbit' || gesture.type === 'pinch' ? 0.35 : 0.08);
+        camera.lookAt(p.x - Math.sin(cam.yaw) * 2.2 * (1 - punch), 1.1, p.z - Math.cos(cam.yaw) * 2.2 * (1 - punch));
+        // strides → dust + footsteps
+        if (lastPlayerPos) { strideAcc += p.distanceTo(lastPlayerPos); if (strideAcc > 0.62 && walk.speed > 0.2) { strideAcc = 0; if (fx) fx.step(p, rig.g.rotation.y); if (window.NumeraAudio) NumeraAudio.step(); } }
+        lastPlayerPos = p.clone();
+        grassPlayer.value.copy(p);
+        if (window.NumeraAudio) { let near = 9; beacons.forEach(b => { near = Math.min(near, b.position.distanceTo(p)); }); NumeraAudio.beaconProximity(1 - Math.min(1, Math.max(0, (near - 1.2) / 3))); }
       }
       rig.animate(s, walk.speed, dt);
+      if (fx) fx.update({ t: s, dt, player: rig.g.position, L: daylight(hourNow()) });
     }
     applyDaylight(s);
+    if (window.NumeraAudio && (t | 0) % 60 === 0) NumeraAudio.setDaylight(daylight(hourNow()).day);
     if (composer) composer.render(dt); else renderer.render(scene, camera);
     placeLabels();
   }
@@ -8854,10 +9101,10 @@ window.NumeraIsle = (function () {
     });
   }
   function loop(t) { if (!running) return; if (!document.hidden) frame(t); requestAnimationFrame(loop); }
-  /* ---- tap to move: tap the ground to walk there, hold to steer, tap a beacon to walk up and open its trials */
-  function setPointer(e) {
+  /* ---- gestures: tap = walk there (or approach a beacon), drag = orbit the camera, pinch / wheel = zoom */
+  function setPointer(x, y) {
     const r = renderer.domElement.getBoundingClientRect();
-    ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1; ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    ptr.x = ((x - r.left) / r.width) * 2 - 1; ptr.y = -((y - r.top) / r.height) * 2 + 1;
     ray.setFromCamera(ptr, camera);
   }
   function clampToIsle(p) {
@@ -8870,31 +9117,53 @@ window.NumeraIsle = (function () {
     if (!rig) return;
     walk.target = clampToIsle(p.clone()); walk.manual = true; walk.onArrive = onArrive || null;
     if (showMarker && tapMarker) { tapMarker.position.set(walk.target.x, 0.03, walk.target.z); markerT = performance.now(); }
+    if (window.NumeraAudio) NumeraAudio.tap();
   }
-  function groundPoint() { const hit = new THREE.Vector3(); return ray.ray.intersectPlane(groundPlane, hit) ? hit : null; }
-  function onPointerDown(e) {
+  function tapAt(x, y) {
     if (!rig) return;
-    setPointer(e);
+    setPointer(x, y);
     const hits = ray.intersectObjects(beacons, true);
     if (hits.length) {
       let o = hits[0].object; while (o && !o.userData.id) o = o.parent;
       if (o) { const id = o.userData.id; const toward = o.position.clone().multiplyScalar(1 - 1.25 / o.position.length()); // stop at the plaza edge
-        walkTo(toward, () => { if (onSkillCb) onSkillCb(id); }, true); }
+        walkTo(toward, () => { cam.punchT = performance.now(); if (onSkillCb) setTimeout(() => onSkillCb(id), 350); }, true); }
       return;
     }
-    const g = groundPoint(); if (!g) return;
-    ptrDown = true; lastSteer = performance.now();
-    walkTo(g, null, true);
+    const hit = new THREE.Vector3();
+    if (ray.ray.intersectPlane(groundPlane, hit)) walkTo(hit, null, true);
+  }
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  function onPointerDown(e) {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) gesture = { type: 'pending', x0: e.clientX, y0: e.clientY, t0: performance.now(), lastX: e.clientX, lastY: e.clientY };
+    else if (pointers.size === 2) { const [a, b] = [...pointers.values()]; gesture = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y), dist0: cam.dist }; }
   }
   function onPointerMove(e) {
-    if (!ptrDown || !rig) return;
-    const now = performance.now(); if (now - lastSteer < 60) return; lastSteer = now;
-    setPointer(e); const g = groundPoint(); if (g) walkTo(g, null, false);
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesture.type === 'pinch' && pointers.size === 2) {
+      const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      cam.dist = clamp(gesture.dist0 * gesture.d0 / d, 3.5, 14); cam.zoomed = true; return;
+    }
+    if (gesture.type === 'pending' && Math.hypot(e.clientX - gesture.x0, e.clientY - gesture.y0) > 8) gesture.type = 'orbit';
+    if (gesture.type === 'orbit') {
+      const dx = e.clientX - gesture.lastX, dy = e.clientY - gesture.lastY;
+      cam.yaw -= dx * 0.0065; cam.pitch = clamp(cam.pitch + dy * 0.0045, 0.12, 1.2);
+      gesture.lastX = e.clientX; gesture.lastY = e.clientY;
+    }
   }
+  function onPointerUp(e) {
+    const was = gesture; pointers.delete(e.pointerId);
+    if (was.type === 'pending' && performance.now() - was.t0 < 500) tapAt(e.clientX, e.clientY);
+    if (pointers.size === 0) gesture = { type: 'none' };
+    else if (pointers.size === 1) { const [p] = [...pointers.values()]; gesture = { type: 'orbit', lastX: p.x, lastY: p.y }; }
+  }
+  function onWheel(e) { e.preventDefault(); cam.dist = clamp(cam.dist * (1 + e.deltaY * 0.0012), 3.5, 14); cam.zoomed = true; }
   function resize() {
     if (!renderer || !container || !container.isConnected) return;
     const w = container.clientWidth || 800, h = container.clientHeight || 520;
     renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+    if (!cam.zoomed) cam.dist = camera.aspect < 1 ? 8.4 : 6.8;
     if (composer) { composer.setSize(w, h); const fx = composer.passes.find(p => p.material && p.material.uniforms && p.material.uniforms.resolution); if (fx) fx.material.uniforms.resolution.value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio())); }
   }
 
@@ -8932,7 +9201,7 @@ window.NumeraIsle = (function () {
   // small debug surface (tests + tuning)
   function worldToScreen(x, z) { if (!renderer) return null; const v = new THREE.Vector3(x, 0, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, behind: v.z > 1 }; }
   function beaconScreenPos(i) { const b = beacons[i]; if (!b || !renderer) return null; const v = b.position.clone(); v.y += 1.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }
-  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
+  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
 })();
 
 </script>
@@ -9527,6 +9796,7 @@ function gainXP(amount) {
   if (leveled) {
     $('#lvlOrb').classList.add('pulse');
     setTimeout(() => $('#lvlOrb').classList.remove('pulse'), 600);
+    if (window.NumeraAudio) NumeraAudio.levelUp();
     NumeraAvatar.levelUp(S.level, lvlName(S.level), () => {
       if ($('#screen-map').classList.contains('on')) renderMap();
     });
@@ -9748,6 +10018,7 @@ function renderHome() {
   $('#ioName').textContent = isl.name;
   $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
   const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
+  if (window.NumeraIsle && NumeraIsle.setCompanions) NumeraIsle.setCompanions(Object.keys(S.numen).length, Object.values(S.numen).filter(v => v === 2).length);
   const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
   $('#isle3dWrap').classList.toggle('flat', !ok);
   $('#skillList').hidden = !!ok;
@@ -9910,10 +10181,12 @@ function submitAnswer(mcIdx) {
     fb.className = 'good';
     fb.innerHTML = `<div class="fb-head">${pick(['Solved.', 'The light returns.', 'Exactly so.', 'The Null flinches.', 'Radiant.'])}</div><div class="gain">+${gain} XP${secs < 10 ? ' · swift-bonus' : ''}${lum ? ` · +${lum} ◈` : ''}${Q.combo >= 3 ? ` · combo ×${(1 + 0.1 * Math.min(Q.combo, 10)).toFixed(1)}` : ''}</div>`;
     spawnSparks($('#qCard'), Math.min(8 + Q.combo * 2, 22));
+    if (window.NumeraAudio) { NumeraAudio.correct(Q.combo); if (lum >= 3) NumeraAudio.starfall(); }
   } else {
     Q.combo = 0;
     const card = $('#qCard');
     card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    if (window.NumeraAudio) NumeraAudio.wrong();
     fb.className = 'bad';
     fb.innerHTML = `<div class="fb-head">Not this time — the answer is ${cur.ansText}.</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
     if (Q.mode === 'quest') Q.items.push({ ...Q.curMeta }); // missed problems come back at the end
@@ -10015,6 +10288,7 @@ function endSession() {
         if (!queue.length) { afterNumen(); return; }
         const [id, star] = queue.shift();
         const sk = SKILLS[id].sk;
+        if (window.NumeraAudio) NumeraAudio.catchNumen();
         showModal(`
           <div class="m-eyebrow">${star ? 'Starform Ascension' : 'A Numen Returns'}</div>
           <h3>${sk.numen[0]}</h3>
@@ -10163,6 +10437,9 @@ addEventListener('resize', drawStars);
 drawStars();
 
 $('#guideBtn').addEventListener('click', () => { if (guideGo) guideGo(); });
+function renderMute() { const b = $('#muteBtn'); if (!b) return; b.textContent = S.mute ? '🔇' : '🔊'; b.title = S.mute ? 'Sound off' : 'Sound on'; if (window.NumeraAudio) NumeraAudio.setMuted(!!S.mute); }
+$('#muteBtn').addEventListener('click', () => { S.mute = !S.mute; save(); renderMute(); });
+renderMute();
 $('#setSail').addEventListener('click', () => { renderMap(); show('map'); });
 
 $('#beginBtn').addEventListener('click', () => {

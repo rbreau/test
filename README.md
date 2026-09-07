@@ -102,6 +102,14 @@ The home view is a real-time Three.js scene (r128, vendored under `vendor/`):
   Delta's shards, Ratio Reef's 3:5 coral, the doubling stairs of Exponent Peaks, the
   crossed stones of Algebra Vale, Geometry Grove's polygon pillars, Function Falls,
   the ring temple of Trig, the dice of Chance Mire, and the glowing Calculus Caldera.
+- **Controls**: tap the ground to walk there, tap a beacon to walk up and open its trials,
+  drag to orbit the camera, pinch (or mouse-wheel) to zoom.
+- **Alive**: footstep dust, grass that bends around you, caught Numen orbiting as glowing
+  companions, butterflies over the flowers, a flock of birds by day, shooting stars by
+  night, sparkles rising from every beacon, a camera punch-in when you reach one, and a
+  synthesized soundscape (wind and waves that follow the hour, footsteps, chimes for
+  taps and correct answers, a level-up fanfare, a hum that rises near a beacon) — no
+  audio files; mute from the HUD.
 - **Character**: an articulated procedural Mathfinder (lathe-profiled jacket, curved
   hair strands, backpack, lantern) with a walk cycle and idle emotes — or, when
   `assets/mathfinder.glb` exists, a real rigged glTF character with Mixamo-style
@@ -120,7 +128,9 @@ the JSON the Unity client reads from `game.js`.
 - `index.html` — page skeleton
 - `style.css` — the "starlight cartography" theme
 - `avatar.js` — the Mathfinder character (procedural or glTF), portrait scenes, level-up ceremony
-- `island3d.js` — the living-isle home view and its rendering pipeline
+- `island3d.js` — the living-isle home view, camera gestures and rendering pipeline
+- `effects.js` — dust, sparkles, companions, butterflies, birds, shooting stars
+- `audio.js` — the synthesized soundscape and sound effects
 - `game.js` — world data, 37 problem generators, learning engine, UI
 - `vendor/` — Three.js r128 and its post-processing / glTF add-ons (MIT)
 - `assets.js` — the glTF asset pipeline: reads `assets/manifest.json`, normalizes and toon-shades kit models, hot-swaps them in

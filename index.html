@@ -19,6 +19,7 @@
     <div class="hud-stats">
       <span class="stat lum" title="Lumins — earned from hard problems"><span class="glyph">◈</span> <b id="luminsEl">0</b></span>
       <span class="stat streak" title="Daily streak"><span class="glyph">✹</span> <b id="streakEl">0</b></span>
+      <button id="muteBtn" class="mute" title="Sound on" aria-label="Toggle sound">🔊</button>
     </div>
     <nav class="hud-nav">
       <button data-nav="home">My Isle</button>
@@ -56,7 +57,7 @@
           <div class="io-arc" id="ioArc"></div>
           <h2 id="ioName"></h2>
           <div class="io-crowns" id="ioCrowns"></div>
-          <div class="io-hint">tap the ground to walk · hold to steer · tap a sigil to face its trials</div>
+          <div class="io-hint">tap to walk · drag to look around · pinch to zoom · tap a sigil for its trials</div>
         </div>
         <button class="btn-ghost" id="setSail">🧭 World Map</button>
         <div id="guideCard">
@@ -163,5 +164,7 @@
 <script src="vendor/SkeletonUtils.js"></script>
 <script src="avatar.js"></script>
 <script src="assets.js"></script>
+<script src="effects.js"></script>
+<script src="audio.js"></script>
 <script src="island3d.js"></script>
 <script src="game.js"></script>

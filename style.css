@@ -62,6 +62,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 .stat b{color:var(--parchment);font-variant-numeric:tabular-nums}
 .stat.lum .glyph{color:var(--gold)}
 .stat.streak .glyph{color:var(--coral)}
+.mute{background:transparent;border:1px solid var(--ink-line);border-radius:9px;padding:4px 8px;font-size:14px;line-height:1}
+.mute:hover,.mute:focus-visible{border-color:var(--gold);outline:none}
 .hud-nav{display:flex;gap:8px;flex-wrap:wrap}
 .hud-nav button{
   position:relative;background:transparent;color:var(--dim);
@@ -366,7 +368,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 #ioName{font-size:24px;letter-spacing:.04em;line-height:1.1}
 #ioCrowns{color:var(--dim);font-size:12.5px;font-family:var(--font-mono);margin-top:2px}
 .io-hint{color:#93a5c4aa;font-size:11px;margin-top:6px;letter-spacing:.02em}
-#isle3d canvas{touch-action:none;cursor:crosshair}
+#isle3d canvas{touch-action:none;cursor:grab}
+#isle3d canvas:active{cursor:grabbing}
 #setSail{position:absolute;top:14px;right:14px;z-index:3;background:#0a0e23b8;backdrop-filter:blur(8px);color:var(--parchment)}
 #isleLabels{position:absolute;inset:0;z-index:2;pointer-events:none}
 .isleLabel{

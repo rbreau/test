@@ -19,7 +19,10 @@ window.NumeraIsle = (function () {
   let grassU = { value: 0 }, pollen = null, fireflies = null, nightLights = [], anims = [], curIsle = null, curSkills = [], curIsleIndex = 0;
   let walk = { target: null, pauseUntil: 0, speed: 0 };
   let ray = null, ptr = null, lastT = 0;
-  let landmarkZone = null, tapMarker = null, markerT = -1, ptrDown = false, lastSteer = 0, mountCount = 0;
+  let landmarkZone = null, tapMarker = null, markerT = -1, mountCount = 0, fx = null, companions = { count: 0, stars: 0 };
+  const cam = { yaw: 0, pitch: 0.5, dist: 6.6, zoomed: false, punchT: -1 };
+  const pointers = new Map(); let gesture = { type: 'none' }, strideAcc = 0, lastPlayerPos = null;
+  const grassPlayer = { value: new THREE.Vector3(0, 0, 99) };
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const qs = new URLSearchParams(location.search), hourParam = qs.get('hour');
   const DBG = { nossao: qs.has('nossao'), nobloom: qs.has('nobloom'), nopost: qs.has('nopost') };
@@ -61,7 +64,9 @@ window.NumeraIsle = (function () {
     renderer.domElement.style.touchAction = 'none';
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
     renderer.domElement.addEventListener('pointermove', onPointerMove);
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => renderer.domElement.addEventListener(ev, () => { ptrDown = false; }));
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onPointerUp);
+    renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
     addEventListener('resize', resize);
   }
   function buildComposer(w, h) {
@@ -239,8 +244,8 @@ window.NumeraIsle = (function () {
   }
   function swayMaterial(base) {
     base.onBeforeCompile = sh => {
-      sh.uniforms.uTime = grassU;
-      sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+      sh.uniforms.uTime = grassU; sh.uniforms.uPlayer = grassPlayer;
+      sh.vertexShader = 'uniform float uTime; uniform vec3 uPlayer;\n' + sh.vertexShader.replace('#include <begin_vertex>',
         `vec3 transformed = vec3(position);
          float wgt = clamp(position.y / 0.34, 0.0, 1.0);
          #ifdef USE_INSTANCING
@@ -249,7 +254,12 @@ window.NumeraIsle = (function () {
            float ph = 0.0;
          #endif
          float sw = sin(uTime * 1.7 + ph) * 0.09 * wgt + sin(uTime * 3.1 + ph * 2.0) * 0.02 * wgt;
-         transformed.x += sw; transformed.z += sw * 0.5;`);
+         transformed.x += sw; transformed.z += sw * 0.5;
+         #ifdef USE_INSTANCING
+           vec2 away = instanceMatrix[3].xz - uPlayer.xz; float pd = length(away);
+           float push = smoothstep(0.85, 0.0, pd) * 0.42 * wgt;
+           transformed.xz += (pd > 0.001 ? normalize(away) : vec2(0.0)) * push; transformed.y -= push * 0.35;
+         #endif`);
     };
     return base;
   }
@@ -515,6 +525,9 @@ window.NumeraIsle = (function () {
     fireflies = particles(mobile ? 50 : 110, 0xf2c14e, 3.6, true);
 
     placeCharacter();
+    fx = window.NumeraFX ? NumeraFX.create(scene, { hue, beacons, isleR: ISLE_R }) : null;
+    if (fx) fx.setCompanions(companions.count, companions.stars);
+    strideAcc = 0; lastPlayerPos = null;
     applyDaylight(0);
   }
   function placeCharacter() {
@@ -567,13 +580,23 @@ window.NumeraIsle = (function () {
           }
         } else { walk.speed = Math.max(0, walk.speed - 3 * dt); if (t > walk.pauseUntil) walk.target = pickTarget(); }
         const p = rig.g.position;
-        const back = camera.aspect < 1 ? 8.2 : 6.6, up = camera.aspect < 1 ? 4.4 : 3.7;
-        camera.position.lerp(new THREE.Vector3(p.x, up, p.z + back), 0.035);
-        camera.lookAt(p.x, 1.1, p.z - 2.2);
+        // orbit camera: user-controlled yaw / pitch / distance, with a punch-in on beacon arrival
+        let punch = 0; if (cam.punchT >= 0) { const q = (t - cam.punchT) / 1600; if (q >= 1) cam.punchT = -1; else punch = Math.sin(q * Math.PI) * 0.22; }
+        const d = cam.dist * (1 - punch), cp = Math.cos(cam.pitch);
+        const want = new THREE.Vector3(p.x + Math.sin(cam.yaw) * cp * d, p.y + Math.sin(cam.pitch) * d, p.z + Math.cos(cam.yaw) * cp * d);
+        camera.position.lerp(want, gesture.type === 'orbit' || gesture.type === 'pinch' ? 0.35 : 0.08);
+        camera.lookAt(p.x - Math.sin(cam.yaw) * 2.2 * (1 - punch), 1.1, p.z - Math.cos(cam.yaw) * 2.2 * (1 - punch));
+        // strides → dust + footsteps
+        if (lastPlayerPos) { strideAcc += p.distanceTo(lastPlayerPos); if (strideAcc > 0.62 && walk.speed > 0.2) { strideAcc = 0; if (fx) fx.step(p, rig.g.rotation.y); if (window.NumeraAudio) NumeraAudio.step(); } }
+        lastPlayerPos = p.clone();
+        grassPlayer.value.copy(p);
+        if (window.NumeraAudio) { let near = 9; beacons.forEach(b => { near = Math.min(near, b.position.distanceTo(p)); }); NumeraAudio.beaconProximity(1 - Math.min(1, Math.max(0, (near - 1.2) / 3))); }
       }
       rig.animate(s, walk.speed, dt);
+      if (fx) fx.update({ t: s, dt, player: rig.g.position, L: daylight(hourNow()) });
     }
     applyDaylight(s);
+    if (window.NumeraAudio && (t | 0) % 60 === 0) NumeraAudio.setDaylight(daylight(hourNow()).day);
     if (composer) composer.render(dt); else renderer.render(scene, camera);
     placeLabels();
   }
@@ -588,10 +611,10 @@ window.NumeraIsle = (function () {
     });
   }
   function loop(t) { if (!running) return; if (!document.hidden) frame(t); requestAnimationFrame(loop); }
-  /* ---- tap to move: tap the ground to walk there, hold to steer, tap a beacon to walk up and open its trials */
-  function setPointer(e) {
+  /* ---- gestures: tap = walk there (or approach a beacon), drag = orbit the camera, pinch / wheel = zoom */
+  function setPointer(x, y) {
     const r = renderer.domElement.getBoundingClientRect();
-    ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1; ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    ptr.x = ((x - r.left) / r.width) * 2 - 1; ptr.y = -((y - r.top) / r.height) * 2 + 1;
     ray.setFromCamera(ptr, camera);
   }
   function clampToIsle(p) {
@@ -604,31 +627,53 @@ window.NumeraIsle = (function () {
     if (!rig) return;
     walk.target = clampToIsle(p.clone()); walk.manual = true; walk.onArrive = onArrive || null;
     if (showMarker && tapMarker) { tapMarker.position.set(walk.target.x, 0.03, walk.target.z); markerT = performance.now(); }
+    if (window.NumeraAudio) NumeraAudio.tap();
   }
-  function groundPoint() { const hit = new THREE.Vector3(); return ray.ray.intersectPlane(groundPlane, hit) ? hit : null; }
-  function onPointerDown(e) {
+  function tapAt(x, y) {
     if (!rig) return;
-    setPointer(e);
+    setPointer(x, y);
     const hits = ray.intersectObjects(beacons, true);
     if (hits.length) {
       let o = hits[0].object; while (o && !o.userData.id) o = o.parent;
       if (o) { const id = o.userData.id; const toward = o.position.clone().multiplyScalar(1 - 1.25 / o.position.length()); // stop at the plaza edge
-        walkTo(toward, () => { if (onSkillCb) onSkillCb(id); }, true); }
+        walkTo(toward, () => { cam.punchT = performance.now(); if (onSkillCb) setTimeout(() => onSkillCb(id), 350); }, true); }
       return;
     }
-    const g = groundPoint(); if (!g) return;
-    ptrDown = true; lastSteer = performance.now();
-    walkTo(g, null, true);
+    const hit = new THREE.Vector3();
+    if (ray.ray.intersectPlane(groundPlane, hit)) walkTo(hit, null, true);
+  }
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  function onPointerDown(e) {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) gesture = { type: 'pending', x0: e.clientX, y0: e.clientY, t0: performance.now(), lastX: e.clientX, lastY: e.clientY };
+    else if (pointers.size === 2) { const [a, b] = [...pointers.values()]; gesture = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y), dist0: cam.dist }; }
   }
   function onPointerMove(e) {
-    if (!ptrDown || !rig) return;
-    const now = performance.now(); if (now - lastSteer < 60) return; lastSteer = now;
-    setPointer(e); const g = groundPoint(); if (g) walkTo(g, null, false);
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (gesture.type === 'pinch' && pointers.size === 2) {
+      const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      cam.dist = clamp(gesture.dist0 * gesture.d0 / d, 3.5, 14); cam.zoomed = true; return;
+    }
+    if (gesture.type === 'pending' && Math.hypot(e.clientX - gesture.x0, e.clientY - gesture.y0) > 8) gesture.type = 'orbit';
+    if (gesture.type === 'orbit') {
+      const dx = e.clientX - gesture.lastX, dy = e.clientY - gesture.lastY;
+      cam.yaw -= dx * 0.0065; cam.pitch = clamp(cam.pitch + dy * 0.0045, 0.12, 1.2);
+      gesture.lastX = e.clientX; gesture.lastY = e.clientY;
+    }
   }
+  function onPointerUp(e) {
+    const was = gesture; pointers.delete(e.pointerId);
+    if (was.type === 'pending' && performance.now() - was.t0 < 500) tapAt(e.clientX, e.clientY);
+    if (pointers.size === 0) gesture = { type: 'none' };
+    else if (pointers.size === 1) { const [p] = [...pointers.values()]; gesture = { type: 'orbit', lastX: p.x, lastY: p.y }; }
+  }
+  function onWheel(e) { e.preventDefault(); cam.dist = clamp(cam.dist * (1 + e.deltaY * 0.0012), 3.5, 14); cam.zoomed = true; }
   function resize() {
     if (!renderer || !container || !container.isConnected) return;
     const w = container.clientWidth || 800, h = container.clientHeight || 520;
     renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+    if (!cam.zoomed) cam.dist = camera.aspect < 1 ? 8.4 : 6.8;
     if (composer) { composer.setSize(w, h); const fx = composer.passes.find(p => p.material && p.material.uniforms && p.material.uniforms.resolution); if (fx) fx.material.uniforms.resolution.value.set(1 / (w * renderer.getPixelRatio()), 1 / (h * renderer.getPixelRatio())); }
   }
 
@@ -666,5 +711,5 @@ window.NumeraIsle = (function () {
   // small debug surface (tests + tuning)
   function worldToScreen(x, z) { if (!renderer) return null; const v = new THREE.Vector3(x, 0, z).project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height, behind: v.z > 1 }; }
   function beaconScreenPos(i) { const b = beacons[i]; if (!b || !renderer) return null; const v = b.position.clone(); v.y += 1.5; v.project(camera); const r = renderer.domElement.getBoundingClientRect(); return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height }; }
-  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
+  return { mount, stop, resume, rebuild, beaconScreenPos, worldToScreen, setCompanions(count, stars) { companions = { count, stars }; if (fx) fx.setCompanions(count, stars); }, get camera() { return { yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist }; }, get walkTarget() { return walk.target ? { x: walk.target.x, z: walk.target.z, manual: !!walk.manual } : null; }, get mounts() { return mountCount; }, get playerPos() { return rig ? { x: rig.g.position.x, z: rig.g.position.z } : null; }, get ready() { ensureRenderer(); return !!renderer; } };
 })();

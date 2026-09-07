@@ -588,6 +588,7 @@ function gainXP(amount) {
   if (leveled) {
     $('#lvlOrb').classList.add('pulse');
     setTimeout(() => $('#lvlOrb').classList.remove('pulse'), 600);
+    if (window.NumeraAudio) NumeraAudio.levelUp();
     NumeraAvatar.levelUp(S.level, lvlName(S.level), () => {
       if ($('#screen-map').classList.contains('on')) renderMap();
     });
@@ -809,6 +810,7 @@ function renderHome() {
   $('#ioName').textContent = isl.name;
   $('#ioCrowns').innerHTML = `${crowns} / ${isl.skills.length * 3} crowns${isleRestored(i) ? ' · <span style="color:var(--aqua)">✦ restored</span>' : ''}`;
   const skills = isl.skills.map(sk => ({ id: sk.id, name: sk.name, crowns: skillState(sk.id).crowns }));
+  if (window.NumeraIsle && NumeraIsle.setCompanions) NumeraIsle.setCompanions(Object.keys(S.numen).length, Object.values(S.numen).filter(v => v === 2).length);
   const ok = window.NumeraIsle && NumeraIsle.mount($('#isle3d'), $('#isleLabels'), isl, i, skills, openSkill);
   $('#isle3dWrap').classList.toggle('flat', !ok);
   $('#skillList').hidden = !!ok;
@@ -971,10 +973,12 @@ function submitAnswer(mcIdx) {
     fb.className = 'good';
     fb.innerHTML = `<div class="fb-head">${pick(['Solved.', 'The light returns.', 'Exactly so.', 'The Null flinches.', 'Radiant.'])}</div><div class="gain">+${gain} XP${secs < 10 ? ' · swift-bonus' : ''}${lum ? ` · +${lum} ◈` : ''}${Q.combo >= 3 ? ` · combo ×${(1 + 0.1 * Math.min(Q.combo, 10)).toFixed(1)}` : ''}</div>`;
     spawnSparks($('#qCard'), Math.min(8 + Q.combo * 2, 22));
+    if (window.NumeraAudio) { NumeraAudio.correct(Q.combo); if (lum >= 3) NumeraAudio.starfall(); }
   } else {
     Q.combo = 0;
     const card = $('#qCard');
     card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    if (window.NumeraAudio) NumeraAudio.wrong();
     fb.className = 'bad';
     fb.innerHTML = `<div class="fb-head">Not this time — the answer is ${cur.ansText}.</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
     if (Q.mode === 'quest') Q.items.push({ ...Q.curMeta }); // missed problems come back at the end
@@ -1076,6 +1080,7 @@ function endSession() {
         if (!queue.length) { afterNumen(); return; }
         const [id, star] = queue.shift();
         const sk = SKILLS[id].sk;
+        if (window.NumeraAudio) NumeraAudio.catchNumen();
         showModal(`
           <div class="m-eyebrow">${star ? 'Starform Ascension' : 'A Numen Returns'}</div>
           <h3>${sk.numen[0]}</h3>
@@ -1224,6 +1229,9 @@ addEventListener('resize', drawStars);
 drawStars();
 
 $('#guideBtn').addEventListener('click', () => { if (guideGo) guideGo(); });
+function renderMute() { const b = $('#muteBtn'); if (!b) return; b.textContent = S.mute ? '🔇' : '🔊'; b.title = S.mute ? 'Sound off' : 'Sound on'; if (window.NumeraAudio) NumeraAudio.setMuted(!!S.mute); }
+$('#muteBtn').addEventListener('click', () => { S.mute = !S.mute; save(); renderMute(); });
+renderMute();
 $('#setSail').addEventListener('click', () => { renderMap(); show('map'); });
 
 $('#beginBtn').addEventListener('click', () => {
