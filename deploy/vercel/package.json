@@ -1,0 +1,1 @@
+{ "name": "numera", "private": true, "scripts": { "build": "node build-vercel.js" } }

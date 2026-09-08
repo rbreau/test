@@ -163,3 +163,19 @@ the whole game, including the 3D engine, with no external requests.
 7. **Sound design** — combo pitch-risers, island ambience, a catch fanfare.
 8. **More seas** — Linear Algebra Straits, Number Theory Deeps, Proof-Writing Peaks
    for the true expert endgame.
+
+## Play online, install it, keep your progress
+
+- **Live site (Vercel):** the game is deployed as a static site; see
+  `deploy/vercel/README.md` for the URL pattern and how to redeploy.
+- **Install as an app:** on iPhone open the site in Safari → Share → *Add to
+  Home Screen*; on Android/Chrome use *Install app*. `manifest.webmanifest`
+  and `sw.js` make it launch full-screen and keep working offline.
+- **Cloud saves:** tap **☁ Save online** in the top bar and *Create my code*.
+  You get a four-word link code (e.g. `ember-tide-reef-1234`). Enter it on
+  another device with *Use my code* and your isles follow you. Progress
+  syncs to Supabase after every trial; whichever save has more progress
+  wins when two devices disagree. The code is the whole account — treat it
+  like a password.
+- The single-file artifact build (`dist/numera.html`) keeps progress on the
+  device only; its sandbox blocks network calls.
