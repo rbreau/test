@@ -14,7 +14,10 @@ const SKIP = new Set(['unity', 'dist', 'tools', 'docs', 'deploy', '.github', 'bu
 fs.mkdirSync('out');
 for (const name of fs.readdirSync('src')) {
   if (SKIP.has(name)) continue;
-  fs.cpSync(path.join('src', name), path.join('out', name), { recursive: true });
+  const from = path.join('src', name);
+  const st = fs.lstatSync(from);
+  if (st.isSymbolicLink()) { console.log('skipping symlink', name); continue; } // e.g. dev-only links
+  fs.cpSync(from, path.join('out', name), { recursive: true, dereference: false, filter: p => !fs.lstatSync(p).isSymbolicLink() });
 }
 const list = execSync('find out -type f | sort').toString().trim().split('\n');
 console.log(list.length, 'files staged'); console.log(list.join('\n'));
