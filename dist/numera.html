@@ -10555,7 +10555,7 @@ function startRun(skillId, tier) {
   Q.balloon = createBalloonField(zone, runResult);
   runHud();
   Q.balloon.field.querySelector('.bfield-hint').textContent = `Level ${level} · pop ${RUN_LEN} answers before they float away`;
-  if (!S.featSeen.runIntro) { S.featSeen.runIntro = 1; toast(`🎈 <b>Balloon Run</b>: pop the right balloon before it escapes. Three hearts per level; streaks of 3+ pay bonus XP that becomes lumins.`, 7000); }
+  if (!S.featSeen.runIntro) { S.featSeen.runIntro = 1; toast(`🎈 <b>Balloon Run</b>: three hearts per level; streaks of 3+ pay bonus XP that becomes lumins.`, 4500); }
   runNext();
 }
 function runRise() { return [0, 10, 12, 14][Q.tier] * Math.max(0.55, 1 - 0.07 * (Q.level - 1)) * (REDUCED ? 1.5 : 1); }
