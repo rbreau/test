@@ -79,6 +79,13 @@ Every game mechanic maps to an evidence-backed learning principle:
 - **Economy** — **lumins** flow from hard (Gold-tier) problems, flawless runs, island
   restorations, and medals; they buy hints, streak shields, and XP-doubling Comet
   Boosts, so the reward loop feeds back into the learning loop.
+- **Balloon Run** — every whole-number art plays as an arcade level: six balloons rise
+  carrying the answer and five near misses, and you pop the right one before it floats
+  off the top. No pausing between equations. Twenty pops clear a level, three hearts
+  per level, streaks of three or more pay bonus XP that converts to lumins at the end,
+  and levels speed up as you climb. Out of hearts? Spend lumins (or a Bazaar **Spare
+  Heart**) to keep going. Fractions, decimals and multiple-choice arts keep their
+  classic trial format, leaving room for other formats later.
 - **22 medals**, 16 level titles ("Novice of the Shore" → "Grand Mathfinder"),
   island-restoration story beats, level-up ceremonies, and an ending.
 

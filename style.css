@@ -224,6 +224,33 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 }
 #qAnswerZone input:focus-visible{outline:2px solid var(--gold);border-color:var(--gold)}
 
+/* ---------------- balloon run HUD ---------------- */
+#runHud{flex:1;display:flex;justify-content:center;align-items:center;gap:14px;font-family:var(--font-mono);font-size:14px;color:var(--dim);white-space:nowrap}
+#runHud[hidden]{display:none}
+#runLives{color:var(--coral);letter-spacing:.08em;font-size:17px;text-shadow:0 0 8px #f26b8a66}
+#runLives i{font-style:normal;color:#3a446f;text-shadow:none}
+#runProg{color:var(--parchment);font-weight:700}
+#runStreak{transition:transform .2s,color .2s}
+#runStreak.hot{color:var(--gold);text-shadow:0 0 10px var(--gold-soft);transform:scale(1.12)}
+#runScore{color:var(--aqua)}
+#qPrompt.swap{animation:promptswap .35s ease}
+@keyframes promptswap{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.bfloat{
+  position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:5;
+  font-family:var(--font-mono);font-weight:700;font-size:22px;color:var(--aqua);text-shadow:0 2px 8px #000;
+  animation:bfloat .9s ease-out forwards;white-space:nowrap;
+}
+.bfloat.hot{color:var(--gold);font-size:26px}
+.bfloat.bad{color:var(--coral);font-size:17px}
+.bfloat.big{font-size:30px;color:var(--gold);letter-spacing:.06em}
+@keyframes bfloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+.bl.fade{transition:opacity .4s,transform .4s;opacity:0!important;pointer-events:none}
+.bl.miss span{box-shadow:0 0 0 3px var(--coral),0 0 24px var(--coral),inset -6px -8px 14px #00000033}
+@media (max-width:640px){
+  #runHud{gap:9px;font-size:12.5px}
+  #runLives{font-size:15px}
+}
+
 /* ---------------- balloon pop format ---------------- */
 #qAnswerZone.balloons{display:block}
 .bfield{

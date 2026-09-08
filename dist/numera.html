@@ -232,6 +232,33 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 }
 #qAnswerZone input:focus-visible{outline:2px solid var(--gold);border-color:var(--gold)}
 
+/* ---------------- balloon run HUD ---------------- */
+#runHud{flex:1;display:flex;justify-content:center;align-items:center;gap:14px;font-family:var(--font-mono);font-size:14px;color:var(--dim);white-space:nowrap}
+#runHud[hidden]{display:none}
+#runLives{color:var(--coral);letter-spacing:.08em;font-size:17px;text-shadow:0 0 8px #f26b8a66}
+#runLives i{font-style:normal;color:#3a446f;text-shadow:none}
+#runProg{color:var(--parchment);font-weight:700}
+#runStreak{transition:transform .2s,color .2s}
+#runStreak.hot{color:var(--gold);text-shadow:0 0 10px var(--gold-soft);transform:scale(1.12)}
+#runScore{color:var(--aqua)}
+#qPrompt.swap{animation:promptswap .35s ease}
+@keyframes promptswap{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.bfloat{
+  position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:5;
+  font-family:var(--font-mono);font-weight:700;font-size:22px;color:var(--aqua);text-shadow:0 2px 8px #000;
+  animation:bfloat .9s ease-out forwards;white-space:nowrap;
+}
+.bfloat.hot{color:var(--gold);font-size:26px}
+.bfloat.bad{color:var(--coral);font-size:17px}
+.bfloat.big{font-size:30px;color:var(--gold);letter-spacing:.06em}
+@keyframes bfloat{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+.bl.fade{transition:opacity .4s,transform .4s;opacity:0!important;pointer-events:none}
+.bl.miss span{box-shadow:0 0 0 3px var(--coral),0 0 24px var(--coral),inset -6px -8px 14px #00000033}
+@media (max-width:640px){
+  #runHud{gap:9px;font-size:12.5px}
+  #runLives{font-size:15px}
+}
+
 /* ---------------- balloon pop format ---------------- */
 #qAnswerZone.balloons{display:block}
 .bfield{
@@ -639,6 +666,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
       <div class="quest-top">
         <button id="qQuit">✕ Abandon trial</button>
         <div id="qDots"></div>
+        <div id="runHud" hidden><span id="runLives" title="Hearts">♥♥♥</span><span id="runProg">0/20</span><span id="runStreak">🔥 0</span><span id="runScore">+0 XP</span></div>
         <div id="qCombo">×1.0</div>
       </div>
       <div id="qMeta"><span id="qMetaSkill"></span><span id="qMetaTier"></span></div>
@@ -10303,16 +10331,28 @@ function renderSkillList(i) {
 
 
 /* ================================================================
-   ANSWER FORMATS — playful ways to answer that fit the problem.
-   Balloon Pop: whole-number answers float up on balloons; pop the
-   right one before it drifts off the top of the field.
+   BALLOON RUN — the arcade format for whole-number problems.
+   Six balloons rise with the answer and five near misses; pop the
+   right one. No pausing: the next equation launches at once. Three
+   hearts per level, twenty pops to clear it, streaks of three or more
+   pay bonus XP that turns into lumins at the end. Levels speed up.
    ================================================================ */
+const RUN_LEN = 20, RUN_LIVES = 3, HEART_COST = 25;
 const BALLOON_COUNT = 6;
 const BALLOON_HUES = [
   ['#ff7a9a', '#c8324f'], ['#ffd166', '#d8921a'], ['#5be3d6', '#1e9c92'],
   ['#9d8cff', '#5b45d6'], ['#7cc6ff', '#2f7fd1'], ['#a7f07c', '#57a83a'], ['#ffa46b', '#d4602a']];
 function balloonEligible(cur) {
-  return cur.type === 'input' && Number.isInteger(cur.ans) && Math.abs(cur.ans) <= 9999;
+  return cur && cur.type === 'input' && Number.isInteger(cur.ans) && Math.abs(cur.ans) <= 9999;
+}
+/* a skill/tier plays as a Balloon Run when most of its problems have whole-number answers */
+function runEligible(skillId, tier) {
+  let ok = 0; for (let i = 0; i < 6; i++) if (balloonEligible(GEN[skillId](tier))) ok++;
+  return ok >= 4;
+}
+function genEligible(skillId, tier) {
+  for (let i = 0; i < 60; i++) { const q = GEN[skillId](tier); if (balloonEligible(q)) return q; }
+  return null;
 }
 /* plausible wrong answers: near misses, place-value slips, reversed digits, sign flips */
 function balloonPool(ans) {
@@ -10330,94 +10370,210 @@ function balloonPool(ans) {
   return out;
 }
 function stopBalloons() { if (Q && Q.balloon) { Q.balloon.stop(); } }
-function renderBalloons(zone, cur, tier) {
+function floatText(host, x, y, text, cls) {
+  const el = document.createElement('div'); el.className = 'bfloat ' + (cls || ''); el.textContent = text;
+  el.style.left = x + 'px'; el.style.top = y + 'px'; host.appendChild(el); setTimeout(() => el.remove(), 900);
+}
+/* One field that hosts many launches. onResult(good, escaped, {x,y}) fires once per launch. */
+function createBalloonField(zone, onResult) {
   const field = document.createElement('div');
   field.className = 'bfield';
   field.innerHTML = '<div class="bfield-hint">Pop the balloon with the answer before it floats away ✦</div>';
   zone.appendChild(field);
   const W = () => field.clientWidth, H = () => field.clientHeight;
-  const size = W() < 420 ? 66 : 76;
-  const rise = (9 + 2 * (tier - 1)) * (REDUCED ? 1.6 : 1);           // seconds for a balloon to cross the field
-  let pool = balloonPool(cur.ans);
+  const size = () => W() < 420 ? 66 : 76;
+  let balloons = [], running = false, raf = 0, last = 0, done = true, cur = null, rise = 10, pool = [];
   const takeValue = () => { if (!pool.length) pool = balloonPool(cur.ans); return pool.shift(); };
-  const balloons = []; let running = true, raf = 0, last = 0, done = false;
 
-  const cols = shuffle(Array.from({ length: BALLOON_COUNT }, (_, i) => i));
-  // launch slots from just inside the field down to well below it, correct answer never in the top two
-  const slots = Array.from({ length: BALLOON_COUNT }, (_, i) => H() * 0.28 - i * ((H() * 0.28 + size * 2.2) / (BALLOON_COUNT - 1)));
-  const correctSlot = 2 + Math.floor(Math.random() * (BALLOON_COUNT - 2));
-
-  function makeBalloon(i, value, correct) {
+  function makeBalloon(col, value, correct) {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'bl';
     const hue = pick(BALLOON_HUES);
     el.style.setProperty('--c1', hue[0]); el.style.setProperty('--c2', hue[1]);
-    el.style.width = el.style.height = size + 'px';
+    el.style.width = el.style.height = size() + 'px';
     el.innerHTML = `<span>${fmt(value)}</span>`;
     if (String(value).length > 3) el.classList.add('long');
     field.appendChild(el);
-    const b = { el, value, correct, x: 0, y: 0, vy: 0, phase: Math.random() * 6.28, amp: 6 + Math.random() * 6, freq: 0.5 + Math.random() * 0.5, popped: false, col: i };
-    b.el.addEventListener('pointerdown', e => { e.preventDefault(); pop(b); });
-    b.el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pop(b); } });
+    const b = { el, value, correct, x: 0, y: 0, vy: 0, phase: Math.random() * 6.28, amp: 6 + Math.random() * 6, freq: 0.5 + Math.random() * 0.5, popped: false, col };
+    el.addEventListener('pointerdown', e => { e.preventDefault(); pop(b); });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pop(b); } });
     return b;
   }
   function place(b, y) {
-    const margin = 14, lane = (W() - size - margin * 2) / (BALLOON_COUNT - 1);   // balloon centres spread edge to edge
-    b.x = margin + size / 2 + lane * b.col + (Math.random() - 0.5) * Math.min(16, lane * 0.4);
+    const sz = size(), margin = 14, lane = (W() - sz - margin * 2) / (BALLOON_COUNT - 1);   // balloon centres spread edge to edge
+    b.x = margin + sz / 2 + lane * b.col + (Math.random() - 0.5) * Math.min(16, lane * 0.4);
     b.y = y;
-    b.vy = (H() + size * 1.2) / rise * (b.correct ? 1 : 0.88 + Math.random() * 0.24);
-  }
-  for (let i = 0; i < BALLOON_COUNT; i++) {
-    const correct = i === correctSlot;
-    const b = makeBalloon(cols[i], correct ? cur.ans : takeValue(), correct);
-    place(b, slots[i]);
-    balloons.push(b);
+    b.vy = (H() + sz * 1.2) / rise * (b.correct ? 1 : 0.88 + Math.random() * 0.24);
   }
   function draw(b, t) {
+    const sz = size();
     const sway = REDUCED ? 0 : Math.sin(t * b.freq + b.phase) * b.amp;
     const tilt = REDUCED ? 0 : Math.cos(t * b.freq + b.phase) * 6;
-    b.el.style.transform = `translate(${b.x + sway - size / 2}px, ${H() - b.y - size}px) rotate(${tilt}deg)`;
+    b.el.style.transform = `translate(${b.x + sway - sz / 2}px, ${H() - b.y - sz}px) rotate(${tilt}deg)`;
   }
   function tick(now) {
     if (!running) return;
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0); last = now;
-    const t = now / 1000;
+    const t = now / 1000, sz = size();
     for (const b of balloons) {
       if (b.popped) continue;
       b.y += b.vy * dt;
-      if (b.y > H() + size * 1.1) {
+      if (b.y > H() + sz * 1.1) {
         if (b.correct) { escape(b); return; }
         // a wrong balloon that drifts off comes back from below with a fresh number
         b.value = takeValue(); b.el.querySelector('span').textContent = fmt(b.value); b.el.classList.toggle('long', String(b.value).length > 3);
-        place(b, -size * (1 + Math.random() * 1.5));
+        place(b, -sz * (1 + Math.random() * 1.5));
       }
       draw(b, t);
     }
     raf = requestAnimationFrame(tick);
   }
+  function center(b) { const r = b.el.getBoundingClientRect(), f = field.getBoundingClientRect(); return { x: r.left - f.left + r.width / 2, y: r.top - f.top + r.height / 2 }; }
   function pop(b) {
     if (done || b.popped) return;
     b.popped = true; done = true;
     b.el.classList.add('pop');
-    const r = b.el.getBoundingClientRect(), f = field.getBoundingClientRect();
-    spawnSparks(field, 14, { x: r.left - f.left + r.width / 2, y: r.top - f.top + r.height / 2, colors: [b.el.style.getPropertyValue('--c1'), '#fff', b.el.style.getPropertyValue('--c2')] });
+    const at = center(b);
+    spawnSparks(field, 14, { ...at, colors: [b.el.style.getPropertyValue('--c1'), '#fff', b.el.style.getPropertyValue('--c2')] });
     if (window.NumeraAudio) NumeraAudio.pop();
-    finish(b.correct, false);
+    settle(b.correct, false, at, b);
   }
   function escape(b) {
     if (done) return;
     done = true;
     b.el.classList.add('gone');
-    finish(false, true);
+    settle(false, true, { x: b.x, y: 24 }, b);
   }
-  function finish(good, escaped) {
+  function settle(good, escaped, at, hit) {
     running = false; cancelAnimationFrame(raf);
-    field.classList.add('done');
-    for (const b of balloons) { if (b.correct && !b.popped) b.el.classList.add('reveal'); b.el.disabled = true; }
-    submitAnswer(undefined, { good, escaped });
+    for (const b of balloons) { b.el.disabled = true; if (b.correct && !b.popped) b.el.classList.add('reveal'); if (!good && b === hit && !b.correct) b.el.classList.add('miss'); }
+    onResult(good, escaped, at);
   }
-  raf = requestAnimationFrame(tick);
-  return { stop() { running = false; cancelAnimationFrame(raf); } };
+  function clear(fade) {
+    const old = balloons; balloons = [];
+    old.forEach(b => { if (fade) { b.el.classList.add('fade'); setTimeout(() => b.el.remove(), 450); } else b.el.remove(); });
+  }
+  return {
+    field,
+    launch(q, riseSecs) {
+      clear(true);
+      cur = q; rise = riseSecs; pool = balloonPool(q.ans); done = false; last = 0;
+      field.classList.remove('done');
+      const cols = shuffle(Array.from({ length: BALLOON_COUNT }, (_, i) => i));
+      const h = H(), sz = size();
+      // launch slots from just inside the field down to well below it; the answer never rides the top two
+      const slots = Array.from({ length: BALLOON_COUNT }, (_, i) => h * 0.28 - i * ((h * 0.28 + sz * 2.2) / (BALLOON_COUNT - 1)));
+      const correctSlot = 2 + Math.floor(Math.random() * (BALLOON_COUNT - 2));
+      for (let i = 0; i < BALLOON_COUNT; i++) {
+        const correct = i === correctSlot;
+        const b = makeBalloon(cols[i], correct ? q.ans : takeValue(), correct);
+        place(b, slots[i]); draw(b, performance.now() / 1000);
+        balloons.push(b);
+      }
+      running = true; raf = requestAnimationFrame(tick);
+    },
+    stop() { running = false; done = true; cancelAnimationFrame(raf); },
+    destroy() { running = false; cancelAnimationFrame(raf); field.remove(); }
+  };
+}
+
+function startRun(skillId, tier) {
+  const st = skillState(skillId);
+  const level = (st.runLevel && st.runLevel[tier]) || 1;
+  Q = { mode: 'run', skillId, tier, level, items: [], i: -1, correct: 0, misses: 0, lives: RUN_LIVES, combo: 0, best: 0, xp: 0, lum: 0, streakXP: 0, won: false, hinted: false, boost: S.items.boost > 0, answered: false, busy: false };
+  if (Q.boost) { S.items.boost--; toast('☄ <b>Comet Boost</b> burns — double XP this run!'); }
+  show('quest');
+  const info = SKILLS[skillId];
+  $('#qMetaSkill').textContent = `${info.isl.name} · ${info.sk.name}`;
+  $('#qMetaTier').textContent = `${['', 'Bronze', 'Silver', 'Gold'][tier]} · Level ${level}`;
+  $('#qDots').hidden = true; $('#qCombo').hidden = true; $('#runHud').hidden = false;
+  $('#qFeedback').hidden = true; $('#qHintBox').hidden = true; $('#qTipBox').hidden = true;
+  $('#qSubmit').hidden = true; $('#qNext').hidden = true;
+  $('#qHint').textContent = `✧ Hint (${S.items.hints})`; $('#qHint').disabled = false;
+  const zone = $('#qAnswerZone');
+  zone.classList.add('balloons'); zone.innerHTML = '';
+  Q.balloon = createBalloonField(zone, runResult);
+  runHud();
+  Q.balloon.field.querySelector('.bfield-hint').textContent = `Level ${level} · pop ${RUN_LEN} answers before they float away`;
+  if (!S.featSeen.runIntro) { S.featSeen.runIntro = 1; toast(`🎈 <b>Balloon Run</b>: pop the right balloon before it escapes. Three hearts per level; streaks of 3+ pay bonus XP that becomes lumins.`, 7000); }
+  runNext();
+}
+function runRise() { return [0, 10, 12, 14][Q.tier] * Math.max(0.55, 1 - 0.07 * (Q.level - 1)) * (REDUCED ? 1.5 : 1); }
+function runNext() {
+  if (!Q || Q.mode !== 'run') return;
+  const q = genEligible(Q.skillId, Q.tier);
+  if (!q) { endRun(Q.correct >= RUN_LEN); return; }
+  Q.cur = q; Q.curMeta = { skillId: Q.skillId, tier: Q.tier };
+  Q.items.push({ skillId: Q.skillId, tier: Q.tier }); Q.i++;
+  Q.t0 = Date.now(); Q.busy = false;
+  const prompt = $('#qPrompt');
+  prompt.innerHTML = q.q; prompt.classList.remove('swap'); void prompt.offsetWidth; prompt.classList.add('swap');
+  $('#qHintBox').hidden = true;
+  Q.balloon.launch(q, runRise());
+}
+function runHud() {
+  if (!Q || Q.mode !== 'run') return;
+  $('#runLives').innerHTML = '♥'.repeat(Q.lives) + `<i>${'♥'.repeat(Math.max(0, RUN_LIVES - Q.lives))}</i>`;
+  $('#runProg').textContent = `${Q.correct}/${RUN_LEN}`;
+  const sEl = $('#runStreak'); sEl.textContent = `🔥 ${Q.combo}`; sEl.classList.toggle('hot', Q.combo >= 3);
+  $('#runScore').textContent = `+${Q.xp} XP`;
+}
+function runResult(good, escaped, at) {
+  if (!Q || Q.mode !== 'run' || Q.busy) return;
+  Q.busy = true;
+  const cur = Q.cur, it = Q.items[Q.i]; it.good = good;
+  const st = skillState(Q.skillId); st.attempts++;
+  const field = Q.balloon.field;
+  if (good) {
+    st.correct++; S.stats.solved++;
+    Q.correct++; Q.combo++; Q.best = Math.max(Q.best, Q.combo);
+    S.stats.bestCombo = Math.max(S.stats.bestCombo, Q.combo);
+    let gain = Math.round(10 * Q.tier * (1 + 0.1 * Math.min(Q.combo, 10)));
+    let bonus = 0;
+    if (Q.combo >= 3) { bonus = Math.min(15, 3 * (Q.combo - 2)); Q.streakXP += bonus; gain += bonus; }
+    if (Q.boost) gain *= 2;
+    Q.xp += gain;
+    floatText(field, at.x, at.y, `+${gain}`, bonus ? 'hot' : '');
+    if (Q.combo === 3) floatText(field, field.clientWidth / 2, field.clientHeight * 0.45, '🔥 Streak!', 'big');
+    $('#qTipBox').hidden = true;
+    if (window.NumeraAudio) NumeraAudio.correct(Q.combo);
+  } else {
+    Q.combo = 0; Q.misses++; Q.lives--;
+    floatText(field, at.x, at.y, escaped ? `flew away · ${cur.ansText}` : `✗ it was ${cur.ansText}`, 'bad');
+    const card = $('#qCard'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+    if (window.NumeraAudio) NumeraAudio.wrong();
+    // a miss earns a whisper for the next equation
+    const arr = TIPS[Q.skillId];
+    if (arr) { Q.tipN = Q.tipN || 0; const tipBox = $('#qTipBox'); tipBox.innerHTML = `<b>✧ ${SKILLS[Q.skillId].sk.numen[0]} whispers:</b> ${arr[Q.tipN % arr.length]}`; tipBox.hidden = false; Q.tipN++; }
+  }
+  runHud();
+  if (Q.correct >= RUN_LEN) { setTimeout(() => endRun(true), 500); return; }
+  if (Q.lives <= 0) { setTimeout(offerHeart, 450); return; }
+  setTimeout(runNext, good ? 320 : 900);
+}
+function offerHeart() {
+  if (!Q || Q.mode !== 'run') return;
+  const spare = S.items.heart || 0;
+  const body = `<div class="m-eyebrow">Balloon Run</div><h3>Out of Hearts</h3><div class="m-body m-center"><p>${Q.correct} of ${RUN_LEN} popped on Level ${Q.level}.</p><p>${spare ? `You carry <em>${spare} Spare Heart${spare > 1 ? 's' : ''}</em>.` : `A new heart costs <em>${HEART_COST} ◈</em> — you have <em>${S.lumins} ◈</em>.`}</p><p style="color:var(--dim);font-size:13px">Streaks of three or more pay bonus XP, and bonus XP becomes lumins when a level ends.</p></div>`;
+  const acts = [];
+  const revive = () => { Q.lives = 1; runHud(); toast('♥ A heart rekindles. Keep popping!'); runNext(); };
+  if (spare) acts.push({ label: 'Use a Spare Heart', primary: true, cb: () => { S.items.heart--; save(); revive(); } });
+  else if (S.lumins >= HEART_COST) acts.push({ label: `Buy a heart · ${HEART_COST} ◈`, primary: true, cb: () => { S.lumins -= HEART_COST; save(); updateHUD(); revive(); } });
+  acts.push({ label: 'Give up the level', primary: !acts.length, cb: () => endRun(false) });
+  showModal(body, acts);
+}
+function endRun(won) {
+  if (!Q || Q.mode !== 'run') return;
+  Q.won = won;
+  const st = skillState(Q.skillId);
+  st.runLevel = st.runLevel || {};
+  if (won) st.runLevel[Q.tier] = Q.level + 1;
+  st.runBest = Math.max(st.runBest || 0, Q.correct);
+  Q.coins = Math.floor(Q.streakXP / 15) + (won ? 5 : 0);
+  Q.lum = Q.coins;
+  S.lumins += Q.coins;
+  gainXP(Q.xp);
+  endSession();
 }
 
 /* ================================================================
@@ -10426,6 +10582,7 @@ function renderBalloons(zone, cur, tier) {
 const QUEST_LEN = 8, ECHO_LEN = 6;
 let Q = null;
 function startQuest(skillId, tier) {
+  if (runEligible(skillId, tier)) { startRun(skillId, tier); return; }
   Q = { mode: 'quest', items: Array.from({ length: QUEST_LEN }, () => ({ skillId, tier })), i: -1, correct: 0, combo: 0, best: 0, xp: 0, lum: 0, hinted: false, boost: S.items.boost > 0 };
   if (Q.boost) { S.items.boost--; toast('☄ <b>Comet Boost</b> burns — double XP this trial!'); }
   show('quest');
@@ -10470,16 +10627,13 @@ function nextQuestion() {
   $('#qFeedback').hidden = true;
   $('#qHintBox').hidden = true;
   $('#qNext').hidden = true;
-  const useBalloons = balloonEligible(Q.cur);
-  $('#qSubmit').hidden = Q.cur.type === 'mc' || useBalloons;
+  $('#qSubmit').hidden = Q.cur.type === 'mc';
   $('#qHint').textContent = `✧ Hint (${S.items.hints})`;
   $('#qHint').disabled = false;
+  $('#qDots').hidden = false; $('#qCombo').hidden = false; $('#runHud').hidden = true;
   const zone = $('#qAnswerZone');
-  zone.classList.toggle('balloons', useBalloons);
-  if (useBalloons) {
-    zone.innerHTML = '';
-    Q.balloon = renderBalloons(zone, Q.cur, Q.curMeta.tier);
-  } else if (Q.cur.type === 'mc') {
+  zone.classList.remove('balloons');
+  if (Q.cur.type === 'mc') {
     zone.innerHTML = `<div class="mc">${Q.cur.choices.map((c, j) => `<button data-c="${j}">${c}</button>`).join('')}</div>`;
     zone.querySelectorAll('button').forEach(b => b.addEventListener('click', () => submitAnswer(+b.dataset.c)));
   } else {
@@ -10494,15 +10648,12 @@ function updateCombo() {
   el.textContent = '×' + mult.toFixed(1);
   el.classList.toggle('hot', Q && Q.combo >= 3);
 }
-function submitAnswer(mcIdx, forced) {
+function submitAnswer(mcIdx) {
   if (!Q || Q.answered) return;
   const cur = Q.cur;
   let good;
-  if (Q.balloon) {
-    if (!forced) return;                     // balloons answer themselves (pop or escape)
-    good = !!forced.good;
-    if (forced.escaped) Q.showTip = true;    // it got away: whisper a trick before the next one
-  } else if (cur.type === 'mc') {
+  if (Q.balloon) return;                     // balloon runs score themselves
+  if (cur.type === 'mc') {
     good = mcIdx === cur.ai;
     $$('#qAnswerZone .mc button').forEach((b, j) => {
       b.disabled = true;
@@ -10546,7 +10697,7 @@ function submitAnswer(mcIdx, forced) {
     card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
     if (window.NumeraAudio) NumeraAudio.wrong();
     fb.className = 'bad';
-    fb.innerHTML = `<div class="fb-head">${forced && forced.escaped ? `It floated away — the answer was ${cur.ansText}.` : `Not this time — the answer is ${cur.ansText}.`}</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
+    fb.innerHTML = `<div class="fb-head">Not this time — the answer is ${cur.ansText}.</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
     if (Q.mode === 'quest') Q.items.push({ ...Q.curMeta }); // missed problems come back at the end
   }
   if (Q.mode === 'echo') {
@@ -10585,9 +10736,10 @@ $('#qQuit').addEventListener('click', () => { stopBalloons(); Q = null; renderHo
 function endSession() {
   stopBalloons();
   const q = Q; Q = null;
-  const total = q.items.length;
-  const acc = Math.round(q.correct / total * 100);
-  const firstPassPerfect = q.items.slice(0, q.mode === 'quest' ? QUEST_LEN : ECHO_LEN).every(it => it.good);
+  const run = q.mode === 'run';
+  const total = run ? RUN_LEN : q.items.length;
+  const acc = run ? Math.round(q.correct / Math.max(1, q.correct + q.misses) * 100) : Math.round(q.correct / total * 100);
+  const firstPassPerfect = run ? q.won && q.misses === 0 : q.items.slice(0, q.mode === 'quest' ? QUEST_LEN : ECHO_LEN).every(it => it.good);
   let lines = [];
   S.stats.sessions++;
   // streak
@@ -10602,10 +10754,16 @@ function endSession() {
   let bonusLum = 0;
   if (firstPassPerfect) { S.stats.perfect++; bonusLum += 15; lines.push('✦ <b>Flawless.</b> +15 lumins.'); }
   const newNumen = [], crowned = [];
-  if (q.mode === 'quest') {
-    const meta = q.items[0];
+  if (run) {
+    if (q.streakXP) lines.push(`🔥 Streak bonus <b>+${q.streakXP} XP</b> → <b>+${Math.floor(q.streakXP / 15)} ◈</b> lumins${q.won ? ', and <b>+5 ◈</b> for clearing the level' : ''}.`);
+    else lines.push('Pop three in a row to start a streak — streak XP becomes lumins when the level ends.');
+    if (q.won) lines.push(`<em>Level ${q.level + 1}</em> unlocked — the balloons rise a little faster.`);
+    else lines.push(`${q.correct} of ${RUN_LEN} popped. Hearts refill on every attempt; the Bazaar sells <b>Spare Hearts</b>.`);
+  }
+  if (q.mode === 'quest' || run) {
+    const meta = run ? { skillId: q.skillId, tier: q.tier } : q.items[0];
     const st = skillState(meta.skillId);
-    const passed = q.correct >= Math.ceil(total * 0.85);
+    const passed = run ? q.won : q.correct >= Math.ceil(total * 0.85);
     if (passed && meta.tier === st.crowns + 1) {
       st.crowns = meta.tier;
       crowned.push(TIER_NAMES[meta.tier]);
@@ -10615,7 +10773,7 @@ function endSession() {
       if (st.crowns === 3 && S.numen[meta.skillId] === 1) { S.numen[meta.skillId] = 2; newNumen.push([meta.skillId, true]); }
     } else if (!passed && acc < 50 && meta.tier > 1) {
       lines.push('The trial pushed back hard — a lower trial will rebuild your footing. <em>Struggle is where learning lives.</em>');
-    } else if (!passed) {
+    } else if (!passed && !run) {
       lines.push(`A crown asks for ${Math.ceil(total * 0.85)} of ${total}. The missed ones already returned once — try the trial again; it will feel shorter.`);
     }
   } else {
@@ -10630,19 +10788,19 @@ function endSession() {
   S.lumins += bonusLum;
   save();
   const html = `
-    <div class="m-eyebrow">${q.mode === 'echo' ? 'Echo Tide' : 'Trial Complete'}</div>
-    <h3>${acc === 100 ? 'Perfection' : acc >= 85 ? 'A Strong Light' : acc >= 60 ? 'The Light Holds' : 'The Null Resists'}</h3>
+    <div class="m-eyebrow">${q.mode === 'echo' ? 'Echo Tide' : run ? `Balloon Run · Level ${q.level}` : 'Trial Complete'}</div>
+    <h3>${run ? (q.won ? (q.misses === 0 ? 'Flawless Level!' : 'Level Cleared!') : 'The Balloons Got Away') : acc === 100 ? 'Perfection' : acc >= 85 ? 'A Strong Light' : acc >= 60 ? 'The Light Holds' : 'The Null Resists'}</h3>
     <div class="m-stats">
-      <div>${q.correct}/${total}<span>solved</span></div>
+      <div>${q.correct}/${total}<span>${run ? 'popped' : 'solved'}</span></div>
       <div>+${q.xp}<span>xp</span></div>
       <div>+${q.lum + bonusLum}<span>lumins</span></div>
-      <div>×${q.best}<span>best combo</span></div>
+      <div>×${q.best}<span>best ${run ? 'streak' : 'combo'}</span></div>
     </div>
     <div class="m-body">${crowned.map(c => `<p>♛ <em>${c} crown earned!</em></p>`).join('')}${lines.map(l => `<p>${l}</p>`).join('')}</div>`;
-  showModal(html, [{
-    label: 'Continue', primary: true, cb: () => {
+  const goHome = () => { if (q.mode === 'echo') { renderEcho(); show('echo'); } else { if (isleRestored(currentIsle)) currentIsle = frontierIsle(); renderHome(); show('home'); } updateHUD(); };
+  const finishWith = then => () => {
       const queue = newNumen.slice();
-      const afterNumen = () => checkRestores(() => { checkMedals(); if (q.mode === 'echo') { renderEcho(); show('echo'); } else { if (isleRestored(currentIsle)) currentIsle = frontierIsle(); renderHome(); show('home'); } updateHUD(); });
+      const afterNumen = () => checkRestores(() => { checkMedals(); then(); });
       const popNumen = () => {
         if (!queue.length) { afterNumen(); return; }
         const [id, star] = queue.shift();
@@ -10656,8 +10814,11 @@ function endSession() {
           [{ label: star ? 'Shine On' : 'Welcome, friend', primary: true, cb: popNumen }]);
       };
       popNumen();
-    }
-  }]);
+  };
+  const actions = run
+    ? [{ label: q.won ? `Level ${q.level + 1} ▸` : 'Try again ▸', primary: true, cb: finishWith(() => { updateHUD(); startRun(q.skillId, q.tier); }) }, { label: 'Back to the isle', cb: finishWith(goHome) }]
+    : [{ label: 'Continue', primary: true, cb: finishWith(goHome) }];
+  showModal(html, actions);
 }
 function checkRestores(done) {
   const idx = ISLANDS.findIndex((isl, i) => isleRestored(i) && !S.restoredSeen[isl.id]);
@@ -10757,11 +10918,12 @@ const SHOP = [
   ['hints', '✧', 'Lens of Insight', 'Five hint-charges, ground from clear quartz.', 60, () => { S.items.hints += 5; }],
   ['shield', '🛡', 'Streak Shield', 'Guards your daily flame through one missed day. (max 2)', 120, () => { S.items.shield++; }],
   ['boost', '☄', 'Comet Boost', 'Double XP for your next trial.', 100, () => { S.items.boost++; }],
+  ['heart', '♥', 'Spare Heart', 'One extra heart when a Balloon Run would end. (max 3)', 20, () => { S.items.heart = (S.items.heart || 0) + 1; }],
 ];
 function openShop() {
   const rows = SHOP.map(([id, g, name, desc, cost]) => {
-    const owned = id === 'hints' ? `${S.items.hints} charges` : id === 'shield' ? `${S.items.shield} held` : `${S.items.boost} ready`;
-    const maxed = id === 'shield' && S.items.shield >= 2;
+    const owned = id === 'hints' ? `${S.items.hints} charges` : id === 'shield' ? `${S.items.shield} held` : id === 'heart' ? `${S.items.heart || 0} held` : `${S.items.boost} ready`;
+    const maxed = (id === 'shield' && S.items.shield >= 2) || (id === 'heart' && (S.items.heart || 0) >= 3);
     return `<div class="shoprow"><div class="sh-g">${g}</div><div class="sh-t"><b>${name}</b><span>${desc}</span><div class="owned">${owned}</div></div><button class="btn-ghost" data-buy="${id}" ${S.lumins < cost || maxed ? 'disabled' : ''}>${maxed ? 'Maxed' : cost + ' ◈'}</button></div>`;
   }).join('');
   showModal(`<div class="m-eyebrow">The Wandering Bazaar</div><h3>Spend Your Lumins</h3><div class="m-body"><p style="text-align:center;color:var(--dim)">You carry <b style="color:var(--gold)">◈ ${S.lumins}</b> — earned from gold trials, flawless runs, and starfalls.</p>${rows}</div>`,
