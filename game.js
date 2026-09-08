@@ -179,43 +179,43 @@ const TOTAL_SKILLS = Object.keys(SKILLS).length;
 /* Mental-math whispers — shown before a question when the previous
    answer took too long. Two per art, attributed to its Numen. */
 const TIPS = {
-  add: ['Round, then repair: 297 + 58 → 300 + 58, then give back 3.', 'Add left to right: tens first, then ones. 47 + 38 → 70, then 15 → 85.'],
-  sub: ['Count up, not down: 83 − 47 → from 47, add 3 to reach 50, then 33 more.', 'Round what you subtract: −29 becomes −30, then hand 1 back.'],
-  mul: ['Break a factor apart: 7 × 46 = 7×40 + 7×6.', '×5 is ×10 then half. ×9 is ×10 minus one of them.'],
-  div: ['Divide in steps: ÷6 is ÷2, then ÷3.', 'Ask how many whole TENS of the divisor fit first, then finish the rest.'],
-  negadd: ['Think temperature: −7 + 10 is warming 10° from −7, landing at 3.', 'Subtracting a negative removes a debt — that always makes you richer.'],
-  negmul: ['Count the minus signs: an even count turns positive, odd stays negative.', 'Ignore the signs, multiply the sizes, restore the sign at the very end.'],
-  orderops: ['Scan before you compute: circle every × and ÷ first; + and − wait their turn.', 'Exponents outrank everything except parentheses.'],
-  fracsimp: ['Both even? Halve both. One ends in 0 or 5 and so does the other? Try 5.', 'Digit-sum trick: if both digit-sums divide by 3, the whole fraction does.'],
-  fracadd: ['Same bottom? Add only the tops — the bottom never adds.', 'A quick common bottom is one denominator times the other; simplify after.'],
-  fracmul: ['Cancel before you multiply: cross-simplify any top with any bottom.', 'To divide, flip the second fraction and multiply. Every time, no exceptions.'],
-  decops: ['Think in money: 3.4 + 2.8 is $3.40 + $2.80.', 'For ×, drop the points, multiply whole numbers, then place the decimals back.'],
-  percent: ['Find 10% by sliding the point left; 5% is half of that, 20% is double.', 'p% of n equals n% of p: 8% of 50 = 50% of 8 = 4.'],
-  percchange: ['+20% is one multiply: ×1.2. And −20% is ×0.8.', 'Chained changes multiply: +10% then −10% is ×1.1 × 0.9 = ×0.99 — not zero.'],
-  unitrate: ['Always price ONE first: total ÷ count, then scale.', 'Compare per-one prices, never the sticker prices.'],
-  proportion: ['Cross-multiply: in a/b = c/d, the diagonals a·d and b·c are equal.', 'Ask how the known pair scaled; the unknown pair scales identically.'],
-  scale: ['Scale factor = new ÷ old, always in that order.', 'Lengths scale by s, areas by s², volumes by s³.'],
-  powers: ['Squares near round numbers: 19² = (20−1)² = 400 − 40 + 1.', 'Keep anchors in your pocket: 2¹⁰ = 1024, 15² = 225, 25² = 625.'],
-  exponlaws: ['Same base multiplied? ADD exponents. A power of a power? MULTIPLY them.', 'x⁰ = 1 — a journey of zero steps still stands somewhere.'],
-  scinot: ['Count point-slides, not zeros. Slides left = positive exponent.', 'Multiply the fronts, add the exponents; re-slide once if the front reaches 10.'],
-  onestep: ['Don’t solve — UNDO. Whatever touches x, do the opposite to both sides.', 'Check by feeding the answer back in; it should balance in your head.'],
-  twostep: ['Peel in reverse order: undo + and − first, × and ÷ last.', 'x on both sides? Subtract the smaller x-term from each side first.'],
-  distribute: ['The outside number multiplies EVERY term inside — count the terms.', '(x+a)(x+b): the middle number is a+b, the last is a·b.'],
-  area: ['Composite shape? Cut it into rectangles — or subtract the hole.', 'A triangle is half its bounding rectangle. That is the whole story of ½bh.'],
-  angles: ['Anchor to three facts: line 180°, turn 360°, triangle 180°.', 'Regular n-gon: each exterior angle is 360/n; the interior is its supplement.'],
-  pythag: ['Know the families: 3-4-5, 5-12-13, 8-15-17 — and every multiple of them.', 'The hypotenuse sits alone: c² = a² + b², never mixed in with a leg.'],
-  linear: ['Slope is rise over run: subtract the y’s over the x’s, same order.', 'In y = mx + b: b is where you start, m is how you move.'],
-  quadratic: ['Factoring x² + bx + c: find two numbers that MULTIPLY to c, ADD to b.', 'The vertex hides at x = −b/2a — symmetry gives it away.'],
-  systems: ['Stack the equations and subtract — one letter should vanish.', 'If an equation hands you y alone, substitute it in; don’t fight it.'],
-  righttri: ['SOH-CAH-TOA — pick the two sides your angle can actually see.', 'Ratios carry no units: a 3-4-5 answer holds at any size.'],
-  unitcircle: ['The 30-45-60 sines just count up: √1/2, √2/2, √3/2.', 'Cosine is the x-shadow, sine the y-shadow, of a point walking the circle.'],
-  trigsolve: ['sin² + cos² = 1 turns either ratio into the other.', 'One answer per quadrant where the sign fits — sketch the circle first.'],
-  probability: ['Probability = wanted ÷ possible. Count both before you divide.', '“And” multiplies; “or” adds (when the events can’t both happen).'],
-  counting: ['Draw a blank slot per choice, fill in the counts, multiply across.', 'Order matters → permutation. Only the group matters → divide the repeats out.'],
-  statistics: ['The mean is a balance point: total = mean × count. Use that backwards.', 'The median needs sorted data — sort first, then take the middle.'],
-  limits: ['Try substituting first — most limits simply want the value there.', 'Got 0/0? Something cancels. Factor and look for the hole.'],
-  derivative: ['Power rule chant: bring it down in front, drop the power by one.', 'A derivative is a slope — sanity-check its sign against the graph in your head.'],
-  integral: ['Integrate = reverse power rule: raise by one, divide by the new power.', 'A definite integral is area — estimate with a rectangle to sanity-check.'],
+  add: ['Round, then repair: 297 + 58 → 300 + 58, then give back 3.', 'Add left to right: tens first, then ones. 47 + 38 → 70, then 15 → 85.', 'Make a ten: 8 + 7 → take 2 from the 7 to make 10, then 5 more → 15. Works for any size: 68 + 27 → 70 + 25.'],
+  sub: ['Count up, not down: 83 − 47 → from 47, add 3 to reach 50, then 33 more.', 'Round what you subtract: −29 becomes −30, then hand 1 back.', 'Same distance, easier numbers: shift both by the same amount. 1000 − 637 = 999 − 636 (no borrowing!) = 363.'],
+  mul: ['Break a factor apart: 7 × 46 = 7×40 + 7×6.', '×5 is ×10 then half. ×9 is ×10 minus one of them.', 'Double-and-halve: 16 × 25 = 8 × 50 = 4 × 100 = 400. Trade factors of 2 until one side is friendly.'],
+  div: ['Divide in steps: ÷6 is ÷2, then ÷3.', 'Ask how many whole TENS of the divisor fit first, then finish the rest.', 'Check with the multiplication table backwards: 84 ÷ 7 asks “7 times what is 84?” — count 7×10 = 70, then 2 more.'],
+  negadd: ['Think temperature: −7 + 10 is warming 10° from −7, landing at 3.', 'Subtracting a negative removes a debt — that always makes you richer.', 'Different signs? Subtract the sizes and keep the sign of the bigger one: −12 + 5 → 12 − 5 = 7, bigger was negative → −7.'],
+  negmul: ['Count the minus signs: an even count turns positive, odd stays negative.', 'Ignore the signs, multiply the sizes, restore the sign at the very end.', 'Dividing follows the same sign rule as multiplying: −24 ÷ 6 = −4, −24 ÷ −6 = 4.'],
+  orderops: ['Scan before you compute: circle every × and ÷ first; + and − wait their turn.', 'Exponents outrank everything except parentheses.', 'Left to right only breaks ties: 12 ÷ 3 × 2 is (12 ÷ 3) × 2 = 8, not 12 ÷ 6.'],
+  fracsimp: ['Both even? Halve both. One ends in 0 or 5 and so does the other? Try 5.', 'Digit-sum trick: if both digit-sums divide by 3, the whole fraction does.', 'Divide by the biggest factor you can spot right away; one big cut beats three small ones. 24/36 → both ÷12 → 2/3.'],
+  fracadd: ['Same bottom? Add only the tops — the bottom never adds.', 'A quick common bottom is one denominator times the other; simplify after.', 'Mixed numbers: add the wholes and the fractions separately, then carry if the fraction tops 1.'],
+  fracmul: ['Cancel before you multiply: cross-simplify any top with any bottom.', 'To divide, flip the second fraction and multiply. Every time, no exceptions.', 'Multiplying by a fraction less than 1 shrinks; dividing by it grows. Use that to sanity-check the answer size.'],
+  decops: ['Think in money: 3.4 + 2.8 is $3.40 + $2.80.', 'For ×, drop the points, multiply whole numbers, then place the decimals back.', 'Line up the decimal points, not the last digits — pad with zeros: 3.4 − 1.25 → 3.40 − 1.25.'],
+  percent: ['Find 10% by sliding the point left; 5% is half of that, 20% is double.', 'p% of n equals n% of p: 8% of 50 = 50% of 8 = 4.', 'Build from 1%: slide the point two places left, then multiply. 7% of 300 → 1% is 3, so 21.'],
+  percchange: ['+20% is one multiply: ×1.2. And −20% is ×0.8.', 'Chained changes multiply: +10% then −10% is ×1.1 × 0.9 = ×0.99 — not zero.', 'Percent change = (new − old) ÷ old. Always divide by where you STARTED.'],
+  unitrate: ['Always price ONE first: total ÷ count, then scale.', 'Compare per-one prices, never the sticker prices.', 'Slide to a friendly count: 3 for $4.50 → 1 for $1.50, so 10 for $15.'],
+  proportion: ['Cross-multiply: in a/b = c/d, the diagonals a·d and b·c are equal.', 'Ask how the known pair scaled; the unknown pair scales identically.', 'Simplify one ratio first: 12/18 = 2/3, then scale 2/3 up to the new bottom.'],
+  scale: ['Scale factor = new ÷ old, always in that order.', 'Lengths scale by s, areas by s², volumes by s³.', 'Going smaller? The factor is below 1. Multiply by ½ rather than dividing by 2 — same thing, fewer mistakes.'],
+  powers: ['Squares near round numbers: 19² = (20−1)² = 400 − 40 + 1.', 'Keep anchors in your pocket: 2¹⁰ = 1024, 15² = 225, 25² = 625.', 'Squares ending in 5: 35² → 3×4 = 12, then tack on 25 → 1225. Always.'],
+  exponlaws: ['Same base multiplied? ADD exponents. A power of a power? MULTIPLY them.', 'x⁰ = 1 — a journey of zero steps still stands somewhere.', 'Same base divided? SUBTRACT exponents. A negative exponent just means “flip it under 1”.'],
+  scinot: ['Count point-slides, not zeros. Slides left = positive exponent.', 'Multiply the fronts, add the exponents; re-slide once if the front reaches 10.', 'Sanity-check size: 10³ is a thousand, 10⁶ a million, 10⁹ a billion — say the word out loud.'],
+  onestep: ['Don’t solve — UNDO. Whatever touches x, do the opposite to both sides.', 'Check by feeding the answer back in; it should balance in your head.', 'Fractions on x? Multiply both sides by the bottom first — clear the fraction before anything else.'],
+  twostep: ['Peel in reverse order: undo + and − first, × and ÷ last.', 'x on both sides? Subtract the smaller x-term from each side first.', 'Read the equation as a story: x was multiplied by 3, then 5 was added. Undo the story backwards.'],
+  distribute: ['The outside number multiplies EVERY term inside — count the terms.', '(x+a)(x+b): the middle number is a+b, the last is a·b.', 'Negative outside? It flips EVERY sign inside: −(2x − 7) = −2x + 7.'],
+  area: ['Composite shape? Cut it into rectangles — or subtract the hole.', 'A triangle is half its bounding rectangle. That is the whole story of ½bh.', 'Circles: area is πr², circumference 2πr. The one with the square is the one measured in squares.'],
+  angles: ['Anchor to three facts: line 180°, turn 360°, triangle 180°.', 'Regular n-gon: each exterior angle is 360/n; the interior is its supplement.', 'Parallel lines cut by a transversal make only two angle sizes — and they add to 180°.'],
+  pythag: ['Know the families: 3-4-5, 5-12-13, 8-15-17 — and every multiple of them.', 'The hypotenuse sits alone: c² = a² + b², never mixed in with a leg.', 'Looking for a leg? Subtract: a² = c² − b². The hypotenuse is always the biggest number.'],
+  linear: ['Slope is rise over run: subtract the y’s over the x’s, same order.', 'In y = mx + b: b is where you start, m is how you move.', 'Parallel lines share a slope; perpendicular slopes multiply to −1 (flip and negate).'],
+  quadratic: ['Factoring x² + bx + c: find two numbers that MULTIPLY to c, ADD to b.', 'The vertex hides at x = −b/2a — symmetry gives it away.', 'Discriminant b² − 4ac: positive → two roots, zero → one, negative → none. Check it before you solve.'],
+  systems: ['Stack the equations and subtract — one letter should vanish.', 'If an equation hands you y alone, substitute it in; don’t fight it.', 'Multiply one equation so a coefficient matches the other, then add or subtract to cancel it.'],
+  righttri: ['SOH-CAH-TOA — pick the two sides your angle can actually see.', 'Ratios carry no units: a 3-4-5 answer holds at any size.', 'Need a side? Set up tan/sin/cos with the angle, cross-multiply, and keep the unknown on top.'],
+  unitcircle: ['The 30-45-60 sines just count up: √1/2, √2/2, √3/2.', 'Cosine is the x-shadow, sine the y-shadow, of a point walking the circle.', 'Quadrant signs spell “All Students Take Calculus”: all, sin, tan, cos positive in I, II, III, IV.'],
+  trigsolve: ['sin² + cos² = 1 turns either ratio into the other.', 'One answer per quadrant where the sign fits — sketch the circle first.', 'Reference angle first, then reflect it into every quadrant where the sign is right.'],
+  probability: ['Probability = wanted ÷ possible. Count both before you divide.', '“And” multiplies; “or” adds (when the events can’t both happen).', 'Complement trick: P(at least one) = 1 − P(none). Often the easier side to count.'],
+  counting: ['Draw a blank slot per choice, fill in the counts, multiply across.', 'Order matters → permutation. Only the group matters → divide the repeats out.', 'Choose-2 shortcut: n(n−1)/2. Ten people shake hands → 10×9/2 = 45.'],
+  statistics: ['The mean is a balance point: total = mean × count. Use that backwards.', 'The median needs sorted data — sort first, then take the middle.', 'A new value above the mean pulls the mean up; the median only moves if it crosses the middle.'],
+  limits: ['Try substituting first — most limits simply want the value there.', 'Got 0/0? Something cancels. Factor and look for the hole.', 'At infinity, only the highest powers matter — compare the top and bottom degrees.'],
+  derivative: ['Power rule chant: bring it down in front, drop the power by one.', 'A derivative is a slope — sanity-check its sign against the graph in your head.', 'Constants vanish, and a constant multiplier just rides along: d/dx of 5x³ is 15x².'],
+  integral: ['Integrate = reverse power rule: raise by one, divide by the new power.', 'A definite integral is area — estimate with a rectangle to sanity-check.', 'Never forget + C on an indefinite integral — and check by differentiating your answer back.'],
 };
 
 const LEVEL_NAMES = ['Novice of the Shore', 'Lantern Bearer', 'Tide Counter', 'Reef Apprentice', 'Chart Reader', 'Sign Walker', 'Ratio Warden', 'Peak Climber', 'Letter Hunter', 'Grove Surveyor', 'Fall Whisperer', 'Circle Dancer', 'Fog Piercer', 'Flux Adept', 'Null Challenger', 'Grand Mathfinder'];
@@ -531,6 +531,7 @@ function freshState() {
     streak: 0, lastDay: 0, bestStreak: 0,
     skills: {}, medals: [], numen: {},
     items: { hints: 3, shield: 0, boost: 0 },
+    tips: {},
     stats: { solved: 0, sessions: 0, perfect: 0, bestCombo: 0, echoes: 0 },
     introSeen: false, seenIsle: {}, restoredSeen: {}, endingSeen: false,
   };
@@ -886,6 +887,48 @@ function renderSkillList(i) {
 }
 
 
+
+/* ================================================================
+   TRICK SCROLLS — mental-math tips are bought per art with lumins.
+   Cheaper than a heart, kept forever, whispered back after a miss.
+   ================================================================ */
+const TIP_COST = 15;
+function ownedTips(id) { if (!S.tips) S.tips = {}; if (!S.tips[id]) S.tips[id] = []; return S.tips[id]; }
+/* HTML for the whisper box: an owned trick (rotating), or a nudge to unlock one */
+function whisperHTML(id) {
+  const arr = TIPS[id]; if (!arr) return '';
+  const own = ownedTips(id), numen = SKILLS[id].sk.numen[0];
+  if (own.length) { Q.tipN = (Q.tipN || 0) + 1; const k = own[Q.tipN % own.length]; return `<b>✧ ${numen} whispers:</b> ${arr[k]}`; }
+  return `<b>✧ ${numen} knows ${arr.length} tricks for this art.</b> <a href="#" class="tiplink" data-tips="${id}">Unlock one · ${TIP_COST} ◈</a>`;
+}
+function showWhisper(id) {
+  const box = $('#qTipBox'); const html = whisperHTML(id);
+  if (!html) { box.hidden = true; return; }
+  box.innerHTML = html; box.hidden = false;
+  const link = box.querySelector('.tiplink'); if (link) link.addEventListener('click', e => { e.preventDefault(); openTips(id); });
+}
+function tipsLabel() { if (!Q) return; const id = Q.curMeta ? Q.curMeta.skillId : Q.skillId; const arr = TIPS[id] || []; $('#qTips').textContent = `✧ Tricks (${ownedTips(id).length}/${arr.length})`; }
+function openTips(id, reveal) {
+  const arr = TIPS[id]; if (!arr) return;
+  const own = ownedTips(id), sk = SKILLS[id].sk;
+  if (Q && Q.balloon && Q.balloon.pause) Q.balloon.pause();
+  const rows = arr.map((t, i) => own.includes(i)
+    ? `<div class="tiprow owned ${reveal === i ? 'fresh' : ''}"><div class="tip-g">✧</div><div class="tip-t"><b>Trick ${i + 1}</b><span>${t}</span></div></div>`
+    : `<div class="tiprow"><div class="tip-g">🔒</div><div class="tip-t"><b>Trick ${i + 1}</b><span>A mental-math trick, kept forever once unlocked.</span></div><button class="btn-ghost" data-tip="${i}" ${S.lumins < TIP_COST ? 'disabled' : ''}>${TIP_COST} ◈</button></div>`).join('');
+  const resume = () => { if (Q && Q.balloon && Q.balloon.resume) Q.balloon.resume(); };
+  showModal(`<div class="m-eyebrow">${sk.name} · Trick Scrolls</div><h3>${sk.numen[0]}’s Tricks</h3><div class="m-body"><p style="text-align:center;color:var(--dim)">You carry <b style="color:var(--gold)">◈ ${S.lumins}</b>. Tricks cost ${TIP_COST} ◈ each — less than a heart — and stay with you.</p>${rows}</div>`,
+    [{ label: Q ? 'Back to the trial' : 'Close', primary: true, cb: resume }]);
+  $$('#modalCard [data-tip]').forEach(b => b.addEventListener('click', () => {
+    if (S.lumins < TIP_COST) return;
+    const i = +b.dataset.tip; S.lumins -= TIP_COST; own.push(i);
+    S.stats.tipsBought = (S.stats.tipsBought || 0) + 1;
+    save(); updateHUD(); tipsLabel();
+    if (window.NumeraAudio) NumeraAudio.tap();
+    if (Q) { const box = $('#qTipBox'); box.innerHTML = `<b>✧ ${sk.numen[0]} whispers:</b> ${arr[i]}`; box.hidden = false; }
+    $('#modal').hidden = true; openTips(id, i);
+  }));
+}
+
 /* ================================================================
    BALLOON RUN — the arcade format for whole-number problems.
    Six balloons rise with the answer and five near misses; pop the
@@ -938,7 +981,7 @@ function createBalloonField(zone, onResult) {
   zone.appendChild(field);
   const W = () => field.clientWidth, H = () => field.clientHeight;
   const size = () => W() < 420 ? 66 : 76;
-  let balloons = [], running = false, raf = 0, last = 0, done = true, cur = null, rise = 10, pool = [];
+  let balloons = [], running = false, paused = false, raf = 0, last = 0, done = true, cur = null, rise = 10, pool = [];
   const takeValue = () => { if (!pool.length) pool = balloonPool(cur.ans); return pool.shift(); };
 
   function makeBalloon(col, value, correct) {
@@ -1013,7 +1056,7 @@ function createBalloonField(zone, onResult) {
     field,
     launch(q, riseSecs) {
       clear(true);
-      cur = q; rise = riseSecs; pool = balloonPool(q.ans); done = false; last = 0;
+      cur = q; rise = riseSecs; pool = balloonPool(q.ans); done = false; paused = false; last = 0;
       field.classList.remove('done');
       const cols = shuffle(Array.from({ length: BALLOON_COUNT }, (_, i) => i));
       const h = H(), sz = size();
@@ -1029,6 +1072,8 @@ function createBalloonField(zone, onResult) {
       running = true; raf = requestAnimationFrame(tick);
     },
     stop() { running = false; done = true; cancelAnimationFrame(raf); },
+    pause() { if (running) { running = false; cancelAnimationFrame(raf); paused = true; } },
+    resume() { if (paused && !done) { paused = false; last = 0; running = true; raf = requestAnimationFrame(tick); } },
     destroy() { running = false; cancelAnimationFrame(raf); field.remove(); }
   };
 }
@@ -1046,6 +1091,7 @@ function startRun(skillId, tier) {
   $('#qFeedback').hidden = true; $('#qHintBox').hidden = true; $('#qTipBox').hidden = true;
   $('#qSubmit').hidden = true; $('#qNext').hidden = true;
   $('#qHint').textContent = `✧ Hint (${S.items.hints})`; $('#qHint').disabled = false;
+  tipsLabel();
   const zone = $('#qAnswerZone');
   zone.classList.add('balloons'); zone.innerHTML = '';
   Q.balloon = createBalloonField(zone, runResult);
@@ -1098,9 +1144,7 @@ function runResult(good, escaped, at) {
     floatText(field, at.x, at.y, escaped ? `flew away · ${cur.ansText}` : `✗ it was ${cur.ansText}`, 'bad');
     const card = $('#qCard'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
     if (window.NumeraAudio) NumeraAudio.wrong();
-    // a miss earns a whisper for the next equation
-    const arr = TIPS[Q.skillId];
-    if (arr) { Q.tipN = Q.tipN || 0; const tipBox = $('#qTipBox'); tipBox.innerHTML = `<b>✧ ${SKILLS[Q.skillId].sk.numen[0]} whispers:</b> ${arr[Q.tipN % arr.length]}`; tipBox.hidden = false; Q.tipN++; }
+    showWhisper(Q.skillId);   // an owned trick, or the offer to unlock one
   }
   runHud();
   if (Q.correct >= RUN_LEN) { setTimeout(() => endRun(true), 500); return; }
@@ -1170,15 +1214,9 @@ function nextQuestion() {
   $('#qMetaSkill').textContent = `${info.isl.name} · ${info.sk.name}`;
   $('#qMetaTier').textContent = Q.mode === 'echo' ? 'Echo Tide' : TIER_NAMES[it.tier];
   $('#qDots').innerHTML = Q.items.map((_, j) => `<i class="${j === Q.i ? 'now' : j < Q.i ? (Q.items[j].good ? 'good' : 'bad') : ''}"></i>`).join('');
-  const tipBox = $('#qTipBox');
-  if (Q.showTip && TIPS[it.skillId]) {
-    const arr = TIPS[it.skillId];
-    Q.tipN = Q.tipN || 0;
-    tipBox.innerHTML = `<b>✧ ${SKILLS[it.skillId].sk.numen[0]} whispers a trick:</b> ${arr[Q.tipN % arr.length]}`;
-    tipBox.hidden = false;
-    Q.tipN++;
-    Q.showTip = false;
-  } else tipBox.hidden = true;
+  if (Q.showTip && TIPS[it.skillId]) { showWhisper(it.skillId); Q.showTip = false; }
+  else $('#qTipBox').hidden = true;
+  tipsLabel();
   $('#qPrompt').innerHTML = Q.cur.q;
   $('#qFeedback').hidden = true;
   $('#qHintBox').hidden = true;
@@ -1277,6 +1315,7 @@ document.addEventListener('keydown', e => {
   if (Q.answered) { nextQuestion(); }
   else if (Q.cur.type === 'input' && !Q.balloon) submitAnswer();
 });
+$('#qTips').addEventListener('click', () => { if (!Q) return; openTips(Q.curMeta ? Q.curMeta.skillId : Q.skillId); });
 $('#qHint').addEventListener('click', () => {
   if (!Q || Q.answered) return;
   if (S.items.hints <= 0) { toast('No hint-charges left. The <b>Bazaar</b> sells a Lens of Insight.'); return; }

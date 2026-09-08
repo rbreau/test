@@ -77,8 +77,11 @@ Every game mechanic maps to an evidence-backed learning principle:
   each with a name and lore line; two crowns catches one, a third crown evolves it
   into a golden **starform**. Gotta catch all 37.
 - **Economy** — **lumins** flow from hard (Gold-tier) problems, flawless runs, island
-  restorations, and medals; they buy hints, streak shields, and XP-doubling Comet
-  Boosts, so the reward loop feeds back into the learning loop.
+  restorations, Balloon Run streaks, and medals; they buy hints, streak shields,
+  XP-doubling Comet Boosts, Spare Hearts, and **Trick Scrolls** — three mental-math
+  tricks per art, 15 ◈ each (cheaper than a heart), kept forever and whispered back
+  after every miss. Nothing is handed out free, so the reward loop feeds back into
+  the learning loop.
 - **Balloon Run** — every whole-number art plays as an arcade level: six balloons rise
   carrying the answer and five near misses, and you pop the right one before it floats
   off the top. No pausing between equations. Twenty pops clear a level, three hearts
