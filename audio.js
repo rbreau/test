@@ -64,6 +64,7 @@ window.NumeraAudio = (function () {
     beaconProximity(v) { if (!ctx) return; humGain.gain.setTargetAtTime(muted ? 0 : Math.max(0, Math.min(1, v)) * 0.035, now(), 0.15); },
     step() { burst(0.07, 700 + Math.random() * 300, 0.18); },
     tap() { tone(880, 0.14, 'sine', 0.12, 0, 1320); },
+    pop() { burst(0.12, 1800, 0.35); tone(720, 0.07, 'square', 0.06, 0, 160); },
     correct(combo) { tone(659, 0.16, 'triangle', 0.16, 0); tone(784, 0.22, 'triangle', 0.16, 0.09); if (combo >= 5) tone(1046, 0.3, 'triangle', 0.14, 0.18); },
     wrong() { tone(196, 0.28, 'sine', 0.14, 0, 130); },
     starfall() { [1568, 1976, 2637].forEach((f, i) => tone(f, 0.25, 'sine', 0.08, i * 0.06)); },

@@ -230,7 +230,7 @@ const LEITNER_DAYS = [0, 1, 3, 7, 16, 35]; // index by box 1..5
      mc:    {q, hint, explain, type:'mc', choices, ai}
    ================================================================ */
 function inQ(q, ans, hint, explain, tol) {
-  return { q, hint, explain, type: 'input', check: s => numEq(s, ans, tol), ansText: fmt(ans) };
+  return { q, hint, explain, type: 'input', ans, check: s => numEq(s, ans, tol), ansText: fmt(ans) };
 }
 function frQ(q, n, d, hint, explain) {
   [n, d] = simp(n, d);
@@ -600,6 +600,7 @@ function gainXP(amount) {
   }
 }
 function show(id) {
+  if (id !== 'quest') stopBalloons();
   $$('.screen').forEach(s => s.classList.remove('on'));
   $('#screen-' + id).classList.add('on');
   $$('.hud-nav button').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
@@ -650,16 +651,16 @@ function showErrorBanner(msg) {
 }
 addEventListener('error', e => showErrorBanner((e.message || 'unknown error') + (e.filename ? ' @ ' + String(e.filename).split('/').pop() + ':' + e.lineno : '')));
 addEventListener('unhandledrejection', e => showErrorBanner(e.reason && e.reason.message ? e.reason.message : String(e.reason)));
-function spawnSparks(host, n) {
+function spawnSparks(host, n, at) {
   if (REDUCED || !host) return;
-  const colors = ['#f2c14e', '#ffe9a8', '#45d6b5', '#ede6d3'];
+  const colors = at && at.colors || ['#f2c14e', '#ffe9a8', '#45d6b5', '#ede6d3'];
   const w = host.clientWidth, h = host.clientHeight;
   for (let i = 0; i < n; i++) {
     const s = document.createElement('i');
     s.className = 'spark';
     const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 130;
-    s.style.left = w / 2 + (Math.random() - 0.5) * 60 + 'px';
-    s.style.top = h / 2 + 'px';
+    s.style.left = (at ? at.x : w / 2 + (Math.random() - 0.5) * 60) + 'px';
+    s.style.top = (at ? at.y : h / 2) + 'px';
     s.style.background = pick(colors);
     s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
     s.style.setProperty('--dy', Math.sin(ang) * dist - 40 + 'px');
@@ -884,6 +885,125 @@ function renderSkillList(i) {
   }
 }
 
+
+/* ================================================================
+   ANSWER FORMATS — playful ways to answer that fit the problem.
+   Balloon Pop: whole-number answers float up on balloons; pop the
+   right one before it drifts off the top of the field.
+   ================================================================ */
+const BALLOON_COUNT = 6;
+const BALLOON_HUES = [
+  ['#ff7a9a', '#c8324f'], ['#ffd166', '#d8921a'], ['#5be3d6', '#1e9c92'],
+  ['#9d8cff', '#5b45d6'], ['#7cc6ff', '#2f7fd1'], ['#a7f07c', '#57a83a'], ['#ffa46b', '#d4602a']];
+function balloonEligible(cur) {
+  return cur.type === 'input' && Number.isInteger(cur.ans) && Math.abs(cur.ans) <= 9999;
+}
+/* plausible wrong answers: near misses, place-value slips, reversed digits, sign flips */
+function balloonPool(ans) {
+  const c = new Set();
+  const add = v => { if (Number.isInteger(v) && v !== ans && (ans < 0 || v >= 0) && Math.abs(v) <= 99999) c.add(v); };
+  [1, 2, 3, 10, 11, 9, 20].forEach(d => { add(ans + d); add(ans - d); });
+  add(ans * 2); add(Math.round(ans / 2)); add(ans * 10); add(Math.round(ans / 10));
+  const digits = String(Math.abs(ans));
+  if (digits.length >= 2) add(Math.sign(ans || 1) * +[...digits].reverse().join(''));
+  add(-ans);
+  // mostly near misses (they make you actually compute), a couple of wild ones for variety
+  const near = shuffle([...c].filter(v => Math.abs(v - ans) <= 11)), far = shuffle([...c].filter(v => Math.abs(v - ans) > 11));
+  const out = [];
+  while (near.length || far.length) { for (let k = 0; k < 3 && near.length; k++) out.push(near.shift()); if (far.length) out.push(far.shift()); }
+  return out;
+}
+function stopBalloons() { if (Q && Q.balloon) { Q.balloon.stop(); } }
+function renderBalloons(zone, cur, tier) {
+  const field = document.createElement('div');
+  field.className = 'bfield';
+  field.innerHTML = '<div class="bfield-hint">Pop the balloon with the answer before it floats away ✦</div>';
+  zone.appendChild(field);
+  const W = () => field.clientWidth, H = () => field.clientHeight;
+  const size = W() < 420 ? 66 : 76;
+  const rise = (9 + 2 * (tier - 1)) * (REDUCED ? 1.6 : 1);           // seconds for a balloon to cross the field
+  let pool = balloonPool(cur.ans);
+  const takeValue = () => { if (!pool.length) pool = balloonPool(cur.ans); return pool.shift(); };
+  const balloons = []; let running = true, raf = 0, last = 0, done = false;
+
+  const cols = shuffle(Array.from({ length: BALLOON_COUNT }, (_, i) => i));
+  // launch slots from just inside the field down to well below it, correct answer never in the top two
+  const slots = Array.from({ length: BALLOON_COUNT }, (_, i) => H() * 0.28 - i * ((H() * 0.28 + size * 2.2) / (BALLOON_COUNT - 1)));
+  const correctSlot = 2 + Math.floor(Math.random() * (BALLOON_COUNT - 2));
+
+  function makeBalloon(i, value, correct) {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'bl';
+    const hue = pick(BALLOON_HUES);
+    el.style.setProperty('--c1', hue[0]); el.style.setProperty('--c2', hue[1]);
+    el.style.width = el.style.height = size + 'px';
+    el.innerHTML = `<span>${fmt(value)}</span>`;
+    if (String(value).length > 3) el.classList.add('long');
+    field.appendChild(el);
+    const b = { el, value, correct, x: 0, y: 0, vy: 0, phase: Math.random() * 6.28, amp: 6 + Math.random() * 6, freq: 0.5 + Math.random() * 0.5, popped: false, col: i };
+    b.el.addEventListener('pointerdown', e => { e.preventDefault(); pop(b); });
+    b.el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pop(b); } });
+    return b;
+  }
+  function place(b, y) {
+    const margin = 14, lane = (W() - size - margin * 2) / (BALLOON_COUNT - 1);   // balloon centres spread edge to edge
+    b.x = margin + size / 2 + lane * b.col + (Math.random() - 0.5) * Math.min(16, lane * 0.4);
+    b.y = y;
+    b.vy = (H() + size * 1.2) / rise * (b.correct ? 1 : 0.88 + Math.random() * 0.24);
+  }
+  for (let i = 0; i < BALLOON_COUNT; i++) {
+    const correct = i === correctSlot;
+    const b = makeBalloon(cols[i], correct ? cur.ans : takeValue(), correct);
+    place(b, slots[i]);
+    balloons.push(b);
+  }
+  function draw(b, t) {
+    const sway = REDUCED ? 0 : Math.sin(t * b.freq + b.phase) * b.amp;
+    const tilt = REDUCED ? 0 : Math.cos(t * b.freq + b.phase) * 6;
+    b.el.style.transform = `translate(${b.x + sway - size / 2}px, ${H() - b.y - size}px) rotate(${tilt}deg)`;
+  }
+  function tick(now) {
+    if (!running) return;
+    const dt = Math.min(0.05, last ? (now - last) / 1000 : 0); last = now;
+    const t = now / 1000;
+    for (const b of balloons) {
+      if (b.popped) continue;
+      b.y += b.vy * dt;
+      if (b.y > H() + size * 1.1) {
+        if (b.correct) { escape(b); return; }
+        // a wrong balloon that drifts off comes back from below with a fresh number
+        b.value = takeValue(); b.el.querySelector('span').textContent = fmt(b.value); b.el.classList.toggle('long', String(b.value).length > 3);
+        place(b, -size * (1 + Math.random() * 1.5));
+      }
+      draw(b, t);
+    }
+    raf = requestAnimationFrame(tick);
+  }
+  function pop(b) {
+    if (done || b.popped) return;
+    b.popped = true; done = true;
+    b.el.classList.add('pop');
+    const r = b.el.getBoundingClientRect(), f = field.getBoundingClientRect();
+    spawnSparks(field, 14, { x: r.left - f.left + r.width / 2, y: r.top - f.top + r.height / 2, colors: [b.el.style.getPropertyValue('--c1'), '#fff', b.el.style.getPropertyValue('--c2')] });
+    if (window.NumeraAudio) NumeraAudio.pop();
+    finish(b.correct, false);
+  }
+  function escape(b) {
+    if (done) return;
+    done = true;
+    b.el.classList.add('gone');
+    finish(false, true);
+  }
+  function finish(good, escaped) {
+    running = false; cancelAnimationFrame(raf);
+    field.classList.add('done');
+    for (const b of balloons) { if (b.correct && !b.popped) b.el.classList.add('reveal'); b.el.disabled = true; }
+    submitAnswer(undefined, { good, escaped });
+  }
+  raf = requestAnimationFrame(tick);
+  return { stop() { running = false; cancelAnimationFrame(raf); } };
+}
+
 /* ================================================================
    QUEST SESSION (also used by Echo Tide)
    ================================================================ */
@@ -909,6 +1029,7 @@ function startEcho() {
 }
 function nextQuestion() {
   if (!Q) return;
+  stopBalloons(); Q.balloon = null;
   Q.i++;
   if (Q.i >= Q.items.length) { endSession(); return; }
   const it = Q.items[Q.i];
@@ -933,11 +1054,16 @@ function nextQuestion() {
   $('#qFeedback').hidden = true;
   $('#qHintBox').hidden = true;
   $('#qNext').hidden = true;
-  $('#qSubmit').hidden = Q.cur.type === 'mc';
+  const useBalloons = balloonEligible(Q.cur);
+  $('#qSubmit').hidden = Q.cur.type === 'mc' || useBalloons;
   $('#qHint').textContent = `✧ Hint (${S.items.hints})`;
   $('#qHint').disabled = false;
   const zone = $('#qAnswerZone');
-  if (Q.cur.type === 'mc') {
+  zone.classList.toggle('balloons', useBalloons);
+  if (useBalloons) {
+    zone.innerHTML = '';
+    Q.balloon = renderBalloons(zone, Q.cur, Q.curMeta.tier);
+  } else if (Q.cur.type === 'mc') {
     zone.innerHTML = `<div class="mc">${Q.cur.choices.map((c, j) => `<button data-c="${j}">${c}</button>`).join('')}</div>`;
     zone.querySelectorAll('button').forEach(b => b.addEventListener('click', () => submitAnswer(+b.dataset.c)));
   } else {
@@ -952,11 +1078,15 @@ function updateCombo() {
   el.textContent = '×' + mult.toFixed(1);
   el.classList.toggle('hot', Q && Q.combo >= 3);
 }
-function submitAnswer(mcIdx) {
+function submitAnswer(mcIdx, forced) {
   if (!Q || Q.answered) return;
   const cur = Q.cur;
   let good;
-  if (cur.type === 'mc') {
+  if (Q.balloon) {
+    if (!forced) return;                     // balloons answer themselves (pop or escape)
+    good = !!forced.good;
+    if (forced.escaped) Q.showTip = true;    // it got away: whisper a trick before the next one
+  } else if (cur.type === 'mc') {
     good = mcIdx === cur.ai;
     $$('#qAnswerZone .mc button').forEach((b, j) => {
       b.disabled = true;
@@ -1000,7 +1130,7 @@ function submitAnswer(mcIdx) {
     card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
     if (window.NumeraAudio) NumeraAudio.wrong();
     fb.className = 'bad';
-    fb.innerHTML = `<div class="fb-head">Not this time — the answer is ${cur.ansText}.</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
+    fb.innerHTML = `<div class="fb-head">${forced && forced.escaped ? `It floated away — the answer was ${cur.ansText}.` : `Not this time — the answer is ${cur.ansText}.`}</div><div class="fb-x">${cur.explain}</div><div class="fb-x" style="margin-top:6px">A stumble teaches more than a stroll. This one will return.</div>`;
     if (Q.mode === 'quest') Q.items.push({ ...Q.curMeta }); // missed problems come back at the end
   }
   if (Q.mode === 'echo') {
@@ -1022,7 +1152,7 @@ $('#qNext').addEventListener('click', nextQuestion);
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !$('#screen-quest').classList.contains('on') || !Q) return;
   if (Q.answered) { nextQuestion(); }
-  else if (Q.cur.type === 'input') submitAnswer();
+  else if (Q.cur.type === 'input' && !Q.balloon) submitAnswer();
 });
 $('#qHint').addEventListener('click', () => {
   if (!Q || Q.answered) return;
@@ -1034,9 +1164,10 @@ $('#qHint').addEventListener('click', () => {
   $('#qHint').textContent = `✧ Hint (${S.items.hints})`;
   save();
 });
-$('#qQuit').addEventListener('click', () => { Q = null; renderHome(); show('home'); toast('Trial abandoned. The problems will wait.'); });
+$('#qQuit').addEventListener('click', () => { stopBalloons(); Q = null; renderHome(); show('home'); toast('Trial abandoned. The problems will wait.'); });
 
 function endSession() {
+  stopBalloons();
   const q = Q; Q = null;
   const total = q.items.length;
   const acc = Math.round(q.correct / total * 100);
