@@ -538,7 +538,7 @@ function freshState() {
 let S = freshState();
 try { const raw = localStorage.getItem(SAVE_KEY); if (raw) S = Object.assign(freshState(), JSON.parse(raw)); } catch (e) { }
 S.featSeen = S.featSeen || {};
-function save() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }
+function save() { S.savedAt = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } if (window.NumeraCloud && NumeraCloud.enabled() && NumeraCloud.code) NumeraCloud.push(S); }
 function skillState(id) { if (!S.skills[id]) S.skills[id] = { crowns: 0, box: 0, due: 0, attempts: 0, correct: 0 }; return S.skills[id]; }
 
 const isleUnlocked = i => i === 0 || ISLANDS[i - 1].skills.every(sk => skillState(sk.id).crowns >= 1);
@@ -585,6 +585,7 @@ function gainXP(amount) {
   S.xp += amount;
   let leveled = false;
   while (S.xp >= xpNeed(S.level)) { S.xp -= xpNeed(S.level); S.level++; leveled = true; }
+  if (leveled && window.NumeraCloud && NumeraCloud.enabled() && !NumeraCloud.code && !S.featSeen.cloudNudge) { S.featSeen.cloudNudge = 1; setTimeout(() => toast('☁ Tip: tap <b>Save online</b> in the top bar to keep your progress safe on any device.', 9000), 2500); }
   if (leveled) {
     $('#lvlOrb').classList.add('pulse');
     setTimeout(() => $('#lvlOrb').classList.remove('pulse'), 600);
@@ -1248,6 +1249,40 @@ addEventListener('resize', drawStars);
 drawStars();
 
 $('#guideBtn').addEventListener('click', () => { if (guideGo) guideGo(); });
+
+/* ---------- cloud saves: link-code account ---------- */
+function cloudLabel() {
+  const b = $('#cloudBtn'); if (!b) return;
+  const on = window.NumeraCloud && NumeraCloud.enabled();
+  b.hidden = !on; if (!on) return;
+  const st = NumeraCloud.status, has = !!NumeraCloud.code;
+  b.textContent = !has ? '☁ Save online' : st === 'syncing' ? '☁ …' : st === 'error' ? '☁ !' : '☁ ✓';
+  b.classList.toggle('linked', has); b.title = !has ? 'Save your progress online and play on any device' : st === 'error' ? 'Sync problem: ' + NumeraCloud.lastError : 'Progress synced · tap for your link code';
+}
+function applyRemote(remote) {
+  const chosen = NumeraCloud.pick(S, remote);
+  if (chosen !== S) { S = Object.assign(freshState(), chosen); S.featSeen = S.featSeen || {}; save(); updateHUD(); if ($('#screen-home').classList.contains('on')) { currentIsle = frontierIsle(); renderHome(); } toast('☁ Progress restored from your link code.'); }
+  else NumeraCloud.push(S);
+}
+function openCloud() {
+  if (!window.NumeraCloud || !NumeraCloud.enabled()) return;
+  const code = NumeraCloud.code;
+  showModal(`
+    <div class="m-eyebrow">Cloud Saves</div>
+    <h3>${code ? 'Your Link Code' : 'Save Online'}</h3>
+    <div class="m-body">
+      ${code ? `<p>Your progress syncs to the cloud after every trial. To play on another device, open Numera there, choose <b>Save online → I have a code</b>, and enter:</p><p class="codebox" id="codeBox">${code}</p><p style="color:var(--dim);font-size:13px">Anyone with this code can load your save — treat it like a password.</p>`
+             : `<p>Create a <b>link code</b> — a memorable four-word key that stores your progress online and lets you continue on any phone or computer. No email, no password.</p><div class="row" style="gap:8px;flex-wrap:wrap;justify-content:center"><input id="codeInput" placeholder="have a code? type it here" style="flex:1;min-width:200px;background:var(--ink-deep);border:1px solid var(--ink-line);border-radius:10px;color:var(--parchment);padding:10px 12px;font-family:var(--font-mono)"></div>`}
+    </div>`,
+    code ? [{ label: 'Copy code', primary: true, cb: () => { navigator.clipboard && navigator.clipboard.writeText(code).then(() => toast('Link code copied.'), () => { }); } }, { label: 'Unlink this device', cb: () => { NumeraCloud.setCode(null); cloudLabel(); toast('Unlinked. Progress stays on this device.'); } }, { label: 'Close' }]
+         : [{ label: 'Create my code', primary: true, cb: async () => { NumeraCloud.setCode(NumeraCloud.genCode()); cloudLabel(); NumeraCloud.push(S); toast(`☁ Linked. Your code: <b>${NumeraCloud.code}</b>`, 9000); } },
+            { label: 'Use my code', cb: async () => { const v = ($('#codeInput') && $('#codeInput').value || '').trim().toLowerCase(); if (!/^[a-z]+-[a-z]+-[a-z]+-\d{4}$/.test(v)) { toast('That doesn’t look like a link code (four words and a number).'); return; } NumeraCloud.setCode(v); cloudLabel(); const remote = await NumeraCloud.pull(); if (!remote) { toast(NumeraCloud.status === 'error' ? 'Could not reach the cloud: ' + NumeraCloud.lastError : 'No save found for that code — this device’s progress will now sync under it.'); NumeraCloud.push(S); } else applyRemote(remote); cloudLabel(); } },
+            { label: 'Not now' }]);
+  // keep the input alive even though the modal buttons close it
+  const inp = $('#codeInput'); if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const btn = [...$$('#modalCard .m-actions button')].find(b => b.textContent === 'Use my code'); if (btn) btn.click(); } }); setTimeout(() => inp.focus(), 50); }
+}
+$('#cloudBtn').addEventListener('click', openCloud);
+if (window.NumeraCloud) { NumeraCloud.onChange(cloudLabel); cloudLabel(); if (NumeraCloud.enabled() && NumeraCloud.code) NumeraCloud.pull().then(remote => { if (remote) applyRemote(remote); }); }
 function renderMute() { const b = $('#muteBtn'); if (!b) return; b.textContent = S.mute ? '🔇' : '🔊'; b.title = S.mute ? 'Sound off' : 'Sound on'; if (window.NumeraAudio) NumeraAudio.setMuted(!!S.mute); }
 $('#muteBtn').addEventListener('click', () => { S.mute = !S.mute; save(); renderMute(); });
 renderMute();
@@ -1279,3 +1314,5 @@ if (S.introSeen) {
 }
 if (window.NumeraIsle && NumeraIsle.onFatal) NumeraIsle.onFatal(e => { showErrorBanner((e && e.message) || 'the 3D isle stopped'); S.lite = true; save(); if ($('#screen-home').classList.contains('on')) renderHome(); });
 updateHUD();
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http') && window.NUMERA_ASSETS) { addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { })); }

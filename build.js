@@ -18,7 +18,8 @@ if (fs.existsSync(glbPath) && fs.statSync(glbPath).size < 11 * 1024 * 1024) {
   charTag += " window.NUMERA_CHARACTER_DATA = 'data:model/gltf-binary;base64," + fs.readFileSync(glbPath).toString('base64') + "';";
   console.log('embedded character', (fs.statSync(glbPath).size / 1024 / 1024).toFixed(1) + ' MB');
 }
-html = html.replace("window.NUMERA_ASSETS = 'assets/';", () => charTag);
+html = html.replace(/window\.NUMERA_ASSETS = 'assets\/'; window\.NUMERA_CLOUD = \{[^}]*\};/, () => charTag + ' window.NUMERA_CLOUD = null;');
+html = html.replace(/<link rel="manifest"[^>]*>\n|<link rel="icon"[^>]*>\n|<link rel="apple-touch-icon"[^>]*>\n/g, '');
 // the artifact host supplies its own charset/viewport metas
 html = html.replace(/^<meta charset="utf-8">\n<meta name="viewport"[^>]*>\n/, '');
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

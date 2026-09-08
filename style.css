@@ -479,3 +479,8 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margi
 #errBanner .btn-ghost{padding:6px 10px}
 .litelink{color:var(--dim);text-transform:none;letter-spacing:0}
 .litelink:hover{color:var(--gold)}
+
+/* ---------------- cloud saves ---------------- */
+.mute.cloud{font-size:12px;letter-spacing:.03em;color:var(--dim)}
+.mute.cloud.linked{color:var(--aqua);border-color:#45d6b566}
+.codebox{font-family:var(--font-mono);font-size:20px;letter-spacing:.06em;color:var(--gold);background:var(--ink-deep);border:1px dashed #f2c14e88;border-radius:10px;padding:12px 16px;text-align:center;user-select:all}

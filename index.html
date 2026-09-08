@@ -1,5 +1,13 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e23">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Numera">
+<meta name="description" content="A math-mastery adventure: solve problems, restore twelve islands, gather the Numen.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Numera</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Spline+Sans+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="style.css">
@@ -21,6 +29,7 @@
       <span class="stat streak" title="Daily streak"><span class="glyph">✹</span> <b id="streakEl">0</b></span>
       <button id="muteBtn" class="mute" title="Sound on" aria-label="Toggle sound">🔊</button>
       <button id="liteToggle" class="mute" title="Toggle lite mode (list view instead of the 3D isle)" aria-label="Toggle lite mode">⚙</button>
+      <button id="cloudBtn" class="mute cloud" hidden>☁ Save online</button>
     </div>
     <nav class="hud-nav">
       <button data-nav="home">My Isle</button>
@@ -148,7 +157,7 @@
 
 <div id="toasts"></div>
 
-<script>window.NUMERA_ASSETS = 'assets/';</script>
+<script>window.NUMERA_ASSETS = 'assets/'; window.NUMERA_CLOUD = { url: 'https://luzkpwrsbsppqririrvp.supabase.co', key: 'sb_publishable_dvpd6l8l4_XQygA4jEE74Q_8x1Kc7ji' };</script>
 <script src="vendor/three.min.js"></script>
 <script src="vendor/CopyShader.js"></script>
 <script src="vendor/LuminosityHighPassShader.js"></script>
@@ -166,5 +175,6 @@
 <script src="assets.js"></script>
 <script src="effects.js"></script>
 <script src="audio.js"></script>
+<script src="cloud.js"></script>
 <script src="island3d.js"></script>
 <script src="game.js"></script>
